@@ -821,7 +821,11 @@
         "subtitleProgress": "{{done}}/{{total}} · +{{left}} trophies left",
         "subtitleDone": "+{{trophies}} trophies earned ✓",
         "progress": "{{done}} / {{total}} completed",
-    "subtitle": "Earn {{trophies}} trophies to kick off"
+    "subtitle": "Earn {{trophies}} trophies to kick off",
+    "moreRemaining_one": "+{{count}} quest remaining · {{done}} ✓",
+    "moreRemaining_other": "+{{count}} quests remaining · {{done}} ✓",
+    "allDoneCount_one": "{{count}} quest completed ✓",
+    "allDoneCount_other": "{{count}} quests completed ✓"
   },
   "modal": {
         "title": "Your first wins 🔥",

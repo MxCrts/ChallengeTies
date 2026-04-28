@@ -252,7 +252,11 @@
         "subtitleProgress": "{{done}}/{{total}} · +{{left}} trophées restants",
         "subtitleDone": "+{{trophies}} trophées gagnés ✓",
         "progress": "{{done}} / {{total}} complétées",
-    "subtitle": "Gagne {{trophies}} trophées pour démarrer"
+    "subtitle": "Gagne {{trophies}} trophées pour démarrer",
+    "moreRemaining_one": "+{{count}} quête restante · {{done}} ✓",
+    "moreRemaining_other": "+{{count}} quêtes restantes · {{done}} ✓",
+    "allDoneCount_one": "{{count}} quête complétée ✓",
+    "allDoneCount_other": "{{count}} quêtes complétées ✓"
   },
   "modal": {
         "title": "Tes premières victoires 🔥",

@@ -775,7 +775,11 @@
         "subtitleProgress": "{{done}}/{{total}} · 还剩 +{{left}} 奖杯",
         "subtitleDone": "+{{trophies}} 奖杯已获得 ✓",
         "progress": "{{done}} / {{total}} 已完成",
-    "subtitle": "赢得 {{trophies}} 个奖杯开启旅程"
+    "subtitle": "赢得 {{trophies}} 个奖杯开启旅程",
+    "moreRemaining_one": "+{{count}} 个任务剩余 · {{done}} ✓",
+    "moreRemaining_other": "+{{count}} 个任务剩余 · {{done}} ✓",
+    "allDoneCount_one": "{{count}} 个任务已完成 ✓",
+    "allDoneCount_other": "{{count}} 个任务已完成 ✓"
   },
   "modal": {
         "title": "你的第一批胜利 🔥",

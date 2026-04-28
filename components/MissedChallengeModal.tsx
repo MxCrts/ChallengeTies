@@ -454,28 +454,28 @@ const MissedChallengeModal: React.FC<MissedChallengeModalProps> = ({
                   keyboardShouldPersistTaps="handled"
                 >
                   <View style={styles.optionsContainer}>
-                    {/* Watch ad (rewarded) */}
-                    <TouchableOpacity
-                      style={[
-                        styles.optionButton,
-                        !isDark && {
-                          backgroundColor: "rgba(255,255,255,0.82)",
-                          borderColor: "rgba(0,0,0,0.06)",
-                        },
-                        (adLoading || (!adReadyLocal && !!rewardedAdUnitId)) && { opacity: 0.72 },
-                      ]}
-                      onPress={handleWatchAd}
-                      disabled={adLoading || (!!rewardedAdUnitId && !adReadyLocal)}
-                      activeOpacity={0.92}
-                      accessibilityRole="button"
-                      accessibilityLabel={t("missedChallenge.ad.title", {
-                        defaultValue: "Sauver la série — Pub",
-                      })}
-                      accessibilityHint={t("missedChallenge.ad.subtitle", {
-                        defaultValue: "Regarde une pub et garde ta série intacte.",
-                      })}
-                      testID="missed-modal-watch-ad"
-                    >
+                    {(adReadyLocal || !rewardedAdUnitId) && (
+<TouchableOpacity
+  style={[
+    styles.optionButton,
+    !isDark && {
+      backgroundColor: "rgba(255,255,255,0.82)",
+      borderColor: "rgba(0,0,0,0.06)",
+    },
+    adLoading && { opacity: 0.72 },
+  ]}
+  onPress={handleWatchAd}
+  disabled={adLoading}
+  activeOpacity={0.92}
+  accessibilityRole="button"
+  accessibilityLabel={t("missedChallenge.ad.title", {
+    defaultValue: "Sauver la série — Pub",
+  })}
+  accessibilityHint={t("missedChallenge.ad.subtitle", {
+    defaultValue: "Regarde une pub et garde ta série intacte.",
+  })}
+  testID="missed-modal-watch-ad"
+>
                       <LinearGradient
                         colors={isDark ? ["#10B981", "#059669"] : ["#34D399", "#10B981"]}
                         style={styles.optionGradient}
@@ -524,6 +524,7 @@ const MissedChallengeModal: React.FC<MissedChallengeModalProps> = ({
                         />
                       </LinearGradient>
                     </TouchableOpacity>
+                    )}
                     {/* Streak Pass */}
                     {canUseStreakPass && (
                       <TouchableOpacity

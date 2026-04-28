@@ -746,7 +746,11 @@
         "subtitleProgress": "{{done}}/{{total}} · +{{left}} трофеев осталось",
         "subtitleDone": "+{{trophies}} трофеев заработано ✓",
         "progress": "{{done}} / {{total}} выполнено",
-    "subtitle": "Заработай {{trophies}} трофеев для старта"
+    "subtitle": "Заработай {{trophies}} трофеев для старта",
+    "moreRemaining_one": "+{{count}} задание осталось · {{done}} ✓",
+    "moreRemaining_other": "+{{count}} заданий осталось · {{done}} ✓",
+    "allDoneCount_one": "{{count}} задание выполнено ✓",
+    "allDoneCount_other": "{{count}} заданий выполнено ✓"
   },
   "modal": {
         "title": "Твои первые победы 🔥",

@@ -5037,7 +5037,11 @@
         "subtitleProgress": "{{done}}/{{total}} · +{{left}} كأس متبقية",
         "subtitleDone": "+{{trophies}} كأس مكتسب ✓",
         "progress": "{{done}} / {{total}} مكتملة",
-    "subtitle": "اكسب {{trophies}} كأس للانطلاق"
+    "subtitle": "اكسب {{trophies}} كأس للانطلاق",
+    "moreRemaining_one": "+{{count}} مهمة متبقية · {{done}} ✓",
+    "moreRemaining_other": "+{{count}} مهام متبقية · {{done}} ✓",
+    "allDoneCount_one": "{{count}} مهمة مكتملة ✓",
+    "allDoneCount_other": "{{count}} مهام مكتملة ✓"
   },
   "modal": {
         "title": "انتصاراتك الأولى 🔥",

@@ -31,13 +31,16 @@ export function useRewardedDetailsAd({
   const [rewardedShowing, setRewardedShowing] = useState(false);
 
   // ✅ AdUnit stable + PROD ready (exactement comme ton screen)
-  const REWARDED_UNIT_ID = useMemo(() => {
-    const prod =
-      (process.env.EXPO_PUBLIC_ADMOB_REWARDED_DETAILS as string | undefined) ||
-      (process.env.EXPO_PUBLIC_ADMOB_REWARDED as string | undefined) ||
-      "";
-    return __DEV__ ? TestIds.REWARDED : (prod || TestIds.REWARDED);
-  }, []);
+  // APRÈS
+const REWARDED_UNIT_ID = useMemo(() => {
+  // En dev OU internal testing → toujours TestIds
+  if (__DEV__) return TestIds.REWARDED;
+  const prod =
+    (process.env.EXPO_PUBLIC_ADMOB_REWARDED_DETAILS as string | undefined) ||
+    (process.env.EXPO_PUBLIC_ADMOB_REWARDED as string | undefined) ||
+    "";
+  return prod || TestIds.REWARDED;
+}, []);
 
   const ensureRewardedInstance = useCallback(() => {
     if (rewardedRef.current) return rewardedRef.current;

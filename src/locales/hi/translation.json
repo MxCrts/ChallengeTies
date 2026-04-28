@@ -781,7 +781,11 @@
         "subtitleProgress": "{{done}}/{{total}} · +{{left}} ट्रॉफी बाकी",
         "subtitleDone": "+{{trophies}} ट्रॉफी जीती ✓",
         "progress": "{{done}} / {{total}} पूरे",
-    "subtitle": "शुरुआत के लिए {{trophies}} ट्रॉफी जीतो"
+    "subtitle": "शुरुआत के लिए {{trophies}} ट्रॉफी जीतो",
+    "moreRemaining_one": "+{{count}} मिशन बाकी · {{done}} ✓",
+    "moreRemaining_other": "+{{count}} मिशन बाकी · {{done}} ✓",
+    "allDoneCount_one": "{{count}} मिशन पूर्ण ✓",
+    "allDoneCount_other": "{{count}} मिशन पूर्ण ✓"
   },
   "modal": {
         "title": "तुम्हारी पहली जीतें 🔥",

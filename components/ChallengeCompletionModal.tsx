@@ -580,24 +580,22 @@ setSuggestedChallenges(withTranslations);
         const earned = await onShowRewarded?.();
         if (!earned) { if (mountedRef.current) { setBusy(false); setAdError(t("completion.adNotEarned", { defaultValue: "Récompense non validée." }) as string); } busyRef.current = false; return; }
       }
-      await completeChallenge(challengeId, selectedDays, double);
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       if (didNavRef.current) return;
-      didNavRef.current = true;
+didNavRef.current = true;
 
-      // Notif J+1 en background (ne bloque pas)
-      schedulePostCompletionNotif(challengeId).catch(() => {});
+// ✅ Affiche next step IMMÉDIATEMENT sans attendre Firestore
+setBusy(false);
+busyRef.current = false;
+setShowNextStep(true);
+nextStepOp.value = withTiming(1, { duration: 320 });
+nextStepY.value  = withSpring(0, { damping: 18, stiffness: 220 });
 
-      // Affiche le flow "next step" au lieu de naviguer directement
-      setTimeout(() => {
-        if (!mountedRef.current) return;
-        setBusy(false);
-        busyRef.current = false;
-        setShowNextStep(true);
-        nextStepOp.value = withTiming(1, { duration: 320 });
-        nextStepY.value  = withSpring(0, { damping: 18, stiffness: 220 });
-        setTimeout(() => { didNavRef.current = false; }, 700);
-      }, 340);
+// ✅ Firestore + notif en arrière-plan (non bloquant)
+completeChallenge(challengeId, selectedDays, double).catch(() => {});
+schedulePostCompletionNotif(challengeId).catch(() => {});
+Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+
+setTimeout(() => { didNavRef.current = false; }, 700);
     } catch {
       if (mountedRef.current) { setBusy(false); setAdError(t("completion.adError", { defaultValue: "Erreur. Réessaie." }) as string); }
       busyRef.current = false;
@@ -733,8 +731,9 @@ setSuggestedChallenges(withTranslations);
               </Pressable>
 
               <View style={[s.row2, { gap: GAP }]}>
-                <Pressable disabled={!canDouble} onPress={() => handleComplete(true)} accessibilityRole="button"
-                  style={({ pressed }) => [s.dblWrap, { opacity: !canDouble ? 0.38 : pressed ? 0.80 : 1 }]}>
+{canDouble && (
+  <Pressable onPress={() => handleComplete(true)} accessibilityRole="button"
+    style={({ pressed }) => [s.dblWrap, { opacity: pressed ? 0.80 : 1 }]}>
                   <LinearGradient
                     colors={canDouble ? ["rgba(255,209,102,0.20)","rgba(255,209,102,0.07)"] : ["rgba(255,255,255,0.05)","rgba(255,255,255,0.02)"]}
                     style={[s.dblBtn, { paddingVertical: BTN_PY*0.82, borderColor: canDouble ? C.glassBorder : C.glassBorderSoft }]}>
@@ -749,6 +748,7 @@ setSuggestedChallenges(withTranslations);
                     </View>
                   </LinearGradient>
                 </Pressable>
+                )}
                 <Pressable onPress={handleShare} accessibilityRole="button"
                   style={({ pressed }) => [s.shrWrap, { opacity: pressed ? 0.7 : 1 }]}>
                   <LinearGradient colors={["rgba(249,115,22,0.20)","rgba(249,115,22,0.07)"]}

@@ -1015,7 +1015,11 @@
         "subtitleProgress": "{{done}}/{{total}} · +{{left}} trofeos restantes",
         "subtitleDone": "+{{trophies}} trofeos ganados ✓",
         "progress": "{{done}} / {{total}} completadas",
-    "subtitle": "Gana {{trophies}} trofeos para comenzar"
+    "subtitle": "Gana {{trophies}} trofeos para comenzar",
+    "moreRemaining_one": "+{{count}} misión restante · {{done}} ✓",
+    "moreRemaining_other": "+{{count}} misiones restantes · {{done}} ✓",
+    "allDoneCount_one": "{{count}} misión completada ✓",
+    "allDoneCount_other": "{{count}} misiones completadas ✓"
   },
   "modal": {
         "title": "Tus primeras victorias 🔥",

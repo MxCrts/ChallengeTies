@@ -1444,7 +1444,11 @@
         "subtitleProgress": "{{done}}/{{total}} · +{{left}} 트로피 남음",
         "subtitleDone": "+{{trophies}} 트로피 획득 ✓",
         "progress": "{{done}} / {{total}} 완료",
-    "subtitle": "트로피 {{trophies}}개를 획득하여 시작"
+    "subtitle": "트로피 {{trophies}}개를 획득하여 시작",
+    "moreRemaining_one": "+{{count}}개 퀘스트 남음 · {{done}} ✓",
+    "moreRemaining_other": "+{{count}}개 퀘스트 남음 · {{done}} ✓",
+    "allDoneCount_one": "{{count}}개 퀘스트 완료 ✓",
+    "allDoneCount_other": "{{count}}개 퀘스트 완료 ✓"
   },
   "modal": {
         "title": "첫 번째 승리 🔥",

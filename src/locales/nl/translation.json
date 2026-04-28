@@ -1495,7 +1495,11 @@
         "subtitleProgress": "{{done}}/{{total}} · +{{left}} trofeeën over",
         "subtitleDone": "+{{trophies}} trofeeën verdiend ✓",
         "progress": "{{done}} / {{total}} voltooid",
-    "subtitle": "Verdien {{trophies}} trofeeën om te starten"
+    "subtitle": "Verdien {{trophies}} trofeeën om te starten",
+    "moreRemaining_one": "+{{count}} missie over · {{done}} ✓",
+    "moreRemaining_other": "+{{count}} missies over · {{done}} ✓",
+    "allDoneCount_one": "{{count}} missie voltooid ✓",
+    "allDoneCount_other": "{{count}} missies voltooid ✓"
   },
   "modal": {
         "title": "Jouw eerste overwinningen 🔥",

@@ -1456,7 +1456,11 @@
         "subtitleProgress": "{{done}}/{{total}} · あと +{{left}} トロフィー",
         "subtitleDone": "+{{trophies}} トロフィー獲得 ✓",
         "progress": "{{done}} / {{total}} 完了",
-    "subtitle": "{{trophies}} 個のトロフィーを獲得してスタート"
+    "subtitle": "{{trophies}} 個のトロフィーを獲得してスタート",
+    "moreRemaining_one": "あと +{{count}} 個のクエスト · {{done}} ✓",
+    "moreRemaining_other": "あと +{{count}} 個のクエスト · {{done}} ✓",
+    "allDoneCount_one": "{{count}} 個のクエスト完了 ✓",
+    "allDoneCount_other": "{{count}} 個のクエスト完了 ✓"
   },
   "modal": {
         "title": "最初の勝利 🔥",

@@ -639,8 +639,15 @@ export default function OnboardingQuestBanner({
             >
               <Text style={[bS.moreLinkText, { color: ORANGE }]}>
                 {remainingCount > 1
-                  ? `+${remainingCount - 1} quête${remainingCount - 1 > 1 ? "s" : ""} restante${remainingCount - 1 > 1 ? "s" : ""}${completedCount > 0 ? ` · ${completedCount} ✓` : ""}`
-                  : `${completedCount} quête${completedCount > 1 ? "s" : ""} complétée${completedCount > 1 ? "s" : ""} ✓`}
+  ? t("onboarding.banner.moreRemaining", {
+      count: remainingCount - 1,
+      done: completedCount,
+      defaultValue: `+${remainingCount - 1} quête${remainingCount - 1 > 1 ? "s" : ""} restante${remainingCount - 1 > 1 ? "s" : ""}${completedCount > 0 ? ` · ${completedCount} ✓` : ""}`,
+    })
+  : t("onboarding.banner.allDoneCount", {
+      count: completedCount,
+      defaultValue: `${completedCount} quête${completedCount > 1 ? "s" : ""} complétée${completedCount > 1 ? "s" : ""} ✓`,
+    })}
               </Text>
               <Ionicons name="chevron-forward" size={ns(12)} color={ORANGE + "80"} />
             </Pressable>

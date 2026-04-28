@@ -81,25 +81,39 @@ const TrophyModal: React.FC = () => {
  const [adLoading, setAdLoading] = React.useState(false);
 
  useEffect(() => {
-   const unsubLoaded = rewarded.addAdEventListener(
-     RewardedAdEventType.LOADED,
-     () => setAdReady(true)
-   );
+   const retryCount = { current: 0 };
 
-   const unsubError = rewarded.addAdEventListener(
-     AdEventType.ERROR,
-     () => setAdReady(false)
-   );
+const unsubLoaded = rewarded.addAdEventListener(
+  RewardedAdEventType.LOADED,
+  () => {
+    retryCount.current = 0;
+    setAdReady(true);
+  }
+);
 
-   const unsubClosed = rewarded.addAdEventListener(
-     AdEventType.CLOSED,
-     () => {
-       setAdReady(false);
-       rewarded.load();
-     }
-   );
+const unsubError = rewarded.addAdEventListener(
+  AdEventType.ERROR,
+  () => {
+    setAdReady(false);
+    const delays = [3_000, 8_000, 20_000];
+    const delay = delays[Math.min(retryCount.current, delays.length - 1)];
+    retryCount.current += 1;
+    setTimeout(() => {
+      try { rewarded.load(); } catch {}
+    }, delay);
+  }
+);
 
-   rewarded.load();
+const unsubClosed = rewarded.addAdEventListener(
+  AdEventType.CLOSED,
+  () => {
+    setAdReady(false);
+    retryCount.current = 0;
+    rewarded.load();
+  }
+);
+
+rewarded.load();
 
    return () => {
      unsubLoaded();
@@ -469,21 +483,21 @@ const TrophyModal: React.FC = () => {
 
                             {/* Boutons actions */}
               <View style={styles.actionsRow}>
-                {!isDoubleReward && (
-                  <TouchableOpacity
-                    onPress={handleDoubleReward}
-                    activeOpacity={0.9}
-                    disabled={!adReady || adLoading}
-                    style={[
-                      styles.doubleRewardButton,
-                      (!adReady || adLoading) && { opacity: 0.5 },
-                    ]}
-                    accessibilityRole="button"
-                    accessibilityLabel={t(
-                      "trophyModal.doubleReward",
-                      "Regarder une vidéo pour doubler la récompense"
-                    )}
-                  >
+                {!isDoubleReward && adReady && (
+  <TouchableOpacity
+    onPress={handleDoubleReward}
+    activeOpacity={0.9}
+    disabled={adLoading}
+    style={[
+      styles.doubleRewardButton,
+      adLoading && { opacity: 0.5 },
+    ]}
+    accessibilityRole="button"
+    accessibilityLabel={t(
+      "trophyModal.doubleReward",
+      "Regarder une vidéo pour doubler la récompense"
+    )}
+  >
                     <LinearGradient
                       colors={["#4ade80", "#16a34a"]}
                       start={{ x: 0, y: 0 }}

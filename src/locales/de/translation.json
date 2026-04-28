@@ -804,7 +804,11 @@
         "subtitleProgress": "{{done}}/{{total}} · +{{left}} Trophäen übrig",
         "subtitleDone": "+{{trophies}} Trophäen verdient ✓",
         "progress": "{{done}} / {{total}} abgeschlossen",
-    "subtitle": "Verdiene {{trophies}} Trophäen zum Start"
+    "subtitle": "Verdiene {{trophies}} Trophäen zum Start",
+    "moreRemaining_one": "+{{count}} Quest übrig · {{done}} ✓",
+    "moreRemaining_other": "+{{count}} Quests übrig · {{done}} ✓",
+    "allDoneCount_one": "{{count}} Quest abgeschlossen ✓",
+    "allDoneCount_other": "{{count}} Quests abgeschlossen ✓"
   },
   "modal": {
         "title": "Deine ersten Siege 🔥",

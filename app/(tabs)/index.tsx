@@ -3015,18 +3015,21 @@ setPostWelcomeAbsorbArmed(true);
                     </Text>
                   </View>
                 </BlurView>
-                {userData?.username && (
+                </View> {/* fin heroBrandRow */}
+
+{userData?.username && (
   <Text style={{
-    fontSize: normalize(12),
+    fontSize: normalize(13),
     fontFamily: "Comfortaa_700Bold",
-    color: "rgba(255,255,255,0.72)",
-    letterSpacing: 0.5,
-    marginTop: normalize(4),
+    color: "rgba(255,255,255,0.78)",
+    letterSpacing: 0.4,
+    textAlign: "center",
+    marginTop: normalize(-8),
+    marginBottom: normalize(4),
   }}>
     {t("homeZ.hero.greeting", { name: userData.username, defaultValue: "Salut {{name}} 👋" })}
   </Text>
 )}
-              </View>
 
               {/* Punchline */}
               <Text
@@ -5225,9 +5228,9 @@ const staticStyles = StyleSheet.create({
     marginBottom: normalize(16),
   },
    logoKeynote: {
-    width: normalize(54),
-    height: normalize(54),
-  },
+  width: normalize(44),
+  height: normalize(44),
+},
   heroBrandPillBlur: {
     borderRadius: normalize(999),
     overflow: "hidden",
