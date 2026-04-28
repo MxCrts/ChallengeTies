@@ -84,9 +84,10 @@ const CIRCLE_TOP = SCREEN_HEIGHT * 0.36;
 const WAVE_COUNT = 3;
 
 GoogleSignin.configure({
-  webClientId:
-    "344780684076-7maiv9tu5o6pk0b4seuirgvfhlgtlpio.apps.googleusercontent.com",
+  webClientId: "344780684076-7maiv9tu5o6pk0b4seuirgvfhlgtlpio.apps.googleusercontent.com",
   offlineAccess: true,
+  forceCodeForRefreshToken: true,
+  scopes: ["profile", "email"],
 });
 
 const Wave = React.memo(
@@ -329,27 +330,31 @@ export default function Login() {
     }
   }, [email, password, t, isValidEmail, loading, triggerShake, isOffline, reduceMotion, afterAuthSuccess]);
 
-  const handleGoogleSignIn = useCallback(async () => {
-    if (submittingRef.current) return;
-    submittingRef.current = true;
-    setSocialLoading("google");
-    try {
-      await GoogleSignin.hasPlayServices();
+  // APRÈS
+const handleGoogleSignIn = useCallback(async () => {
+  if (submittingRef.current) return;
+  submittingRef.current = true;
+  setSocialLoading("google");
+  try {
+    await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
     try { await GoogleSignin.signOut(); } catch {}
-    try { await GoogleSignin.revokeAccess(); } catch {}
-    await GoogleSignin.signIn();
-      const { accessToken, idToken } = await GoogleSignin.getTokens();
-      const credential = GoogleAuthProvider.credential(idToken, accessToken);
-      await signInWithCredential(auth, credential);
+    const userInfo = await GoogleSignin.signIn();
+    const { accessToken, idToken } = await GoogleSignin.getTokens();
+    if (!idToken) throw new Error("no_id_token");
+    const credential = GoogleAuthProvider.credential(idToken, accessToken);
+    await signInWithCredential(auth, credential);
       logEvent("login_google").catch(() => {});
       await afterAuthSuccess();
     } catch (error: any) {
       if (error.code === statusCodes.SIGN_IN_CANCELLED || error.code === statusCodes.IN_PROGRESS) {
         // silencieux
-      } else {
-        if (isMountedRef.current) setErrorMessage(t("unknownError"));
-        triggerShake();
-      }
+     } else {
+  const code = error?.code ?? "no_code";
+  const msg = error?.message ?? "no_message";
+  console.error("Google Sign-In error:", code, msg);
+  if (isMountedRef.current) setErrorMessage(`${t("unknownError")} (${code})`);
+  triggerShake();
+}
     } finally {
       submittingRef.current = false;
       if (isMountedRef.current) setSocialLoading(null);
@@ -379,9 +384,12 @@ export default function Login() {
       if (error.code === "ERR_REQUEST_CANCELED") {
         // silencieux
       } else {
-        if (isMountedRef.current) setErrorMessage(t("unknownError"));
-        triggerShake();
-      }
+  const code = error?.code ?? "no_code";
+  const msg = error?.message ?? "no_message";
+  console.error("Google Sign-In error:", code, msg);
+  if (isMountedRef.current) setErrorMessage(`${t("unknownError")} (${code})`);
+  triggerShake();
+}
     } finally {
       submittingRef.current = false;
       if (isMountedRef.current) setSocialLoading(null);

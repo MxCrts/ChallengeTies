@@ -144,6 +144,8 @@ const SPACING = normalize(15);
 GoogleSignin.configure({
   webClientId: "344780684076-7maiv9tu5o6pk0b4seuirgvfhlgtlpio.apps.googleusercontent.com",
   offlineAccess: true,
+  forceCodeForRefreshToken: true,
+  scopes: ["profile", "email"],
 });
 
 type UsernameStatus = "idle" | "checking" | "available" | "taken" | "invalid";
@@ -454,12 +456,12 @@ const [socialAuthPhoto, setSocialAuthPhoto] = useState<string | null>(null);
   submittingRef.current = true;
   setSocialLoading("google");
   try {
-    await GoogleSignin.hasPlayServices();
-    try { await GoogleSignin.signOut(); } catch {}
-    try { await GoogleSignin.revokeAccess(); } catch {}
-    await GoogleSignin.signIn();
-    const { accessToken, idToken } = await GoogleSignin.getTokens();
-    const credential = GoogleAuthProvider.credential(idToken, accessToken);
+    await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+try { await GoogleSignin.signOut(); } catch {}
+const userInfo = await GoogleSignin.signIn();
+const { accessToken, idToken } = await GoogleSignin.getTokens();
+if (!idToken) throw new Error("no_id_token");
+const credential = GoogleAuthProvider.credential(idToken, accessToken);
     socialRegisterPending.current = true;
 const result = await signInWithCredential(auth, credential);
     const user = result.user;
