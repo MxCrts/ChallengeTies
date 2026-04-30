@@ -4767,7 +4767,8 @@
   "userId": "ユーザーID",
   "lastLogin": "最終ログイン",
   "auth": {
-    "emailPassword": "メールアドレス＋パスワード"
+    "emailPassword": "メールアドレス＋パスワード",
+    "continueWithGoogle": "Googleで続行"
   },
   "participantsLabel": "参加者"
 ,

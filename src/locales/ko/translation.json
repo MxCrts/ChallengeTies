@@ -4755,7 +4755,8 @@
   "userId": "사용자 ID",
   "lastLogin": "마지막 로그인",
   "auth": {
-    "emailPassword": "이메일 + 비밀번호"
+    "emailPassword": "이메일 + 비밀번호",
+    "continueWithGoogle": "Google로 계속하기"
   },
   "participantsLabel": "참가자"
 ,

@@ -2719,7 +2719,8 @@
   "userId": "用户ID",
   "lastLogin": "上次登录",
   "auth": {
-    "emailPassword": "邮箱 + 密码"
+    "emailPassword": "邮箱 + 密码",
+    "continueWithGoogle": "继续使用 Google"
   },
   "participantsLabel": "参与者"
 ,

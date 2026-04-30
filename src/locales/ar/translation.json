@@ -2584,7 +2584,8 @@
   "userId": "معرّف المستخدم",
   "lastLogin": "آخر تسجيل دخول",
   "auth": {
-    "emailPassword": "بريد إلكتروني + كلمة مرور"
+    "emailPassword": "بريد إلكتروني + كلمة مرور",
+    "continueWithGoogle": "المتابعة باستخدام Google"
   },
   "participantsLabel": "المشاركون"
 ,

@@ -823,14 +823,16 @@ InteractionManager.runAfterInteractions(() => { if (isMountedRef.current) nav.re
                   onPress={handleGoogleSignIn}
                   disabled={anySocialLoading}
                   accessibilityRole="button"
-                  accessibilityLabel="Continuer avec Google"
+                  accessibilityLabel={t("auth.continueWithGoogle")}
                 >
                   {socialLoading === "google" ? (
                     <ActivityIndicator color={TEXT_COLOR} size="small" />
                   ) : (
                     <>
                       <Ionicons name="logo-google" size={18} color={TEXT_COLOR} />
-                      <Text style={styles.socialButtonText}>Continuer avec Google</Text>
+                      <Text style={styles.socialButtonText}>
+  {t("auth.continueWithGoogle")}
+</Text>
                     </>
                   )}
                 </TouchableOpacity>

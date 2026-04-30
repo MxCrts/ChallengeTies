@@ -2682,7 +2682,8 @@
   "userId": "ID пользователя",
   "lastLogin": "Последний вход",
   "auth": {
-    "emailPassword": "Эл. почта и пароль"
+    "emailPassword": "Эл. почта и пароль",
+    "continueWithGoogle": "Продолжить с Google"
   },
   "participantsLabel": "Участники"
 ,

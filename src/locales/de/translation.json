@@ -2291,7 +2291,8 @@
   "userId": "Benutzer-ID",
   "lastLogin": "Letzte Anmeldung",
   "auth": {
-    "emailPassword": "E-Mail und Passwort"
+    "emailPassword": "E-Mail und Passwort",
+     "continueWithGoogle": "Mit Google fortfahren"
   },
   "participantsLabel": "Teilnehmende"
 ,

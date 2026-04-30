@@ -4912,7 +4912,8 @@
   "userId": "Gebruikers-ID",
   "lastLogin": "Laatste login",
   "auth": {
-    "emailPassword": "E-mail + wachtwoord"
+    "emailPassword": "E-mail + wachtwoord",
+    "continueWithGoogle": "Doorgaan met Google"
   },
   "challengeHelper": {
     "videos": "Aanbevolen video's",

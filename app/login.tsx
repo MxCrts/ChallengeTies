@@ -469,14 +469,16 @@ const handleGoogleSignIn = useCallback(async () => {
             onPress={handleGoogleSignIn}
             disabled={anySocialLoading}
             accessibilityRole="button"
-            accessibilityLabel="Continuer avec Google"
+            accessibilityLabel={t("auth.continueWithGoogle")}
           >
             {socialLoading === "google" ? (
               <ActivityIndicator color={COLORS.text} size="small" />
             ) : (
               <>
                 <Ionicons name="logo-google" size={18} color={COLORS.text} />
-                <Text style={styles.socialButtonText}>Continuer avec Google</Text>
+                <Text style={styles.socialButtonText}>
+  {t("auth.continueWithGoogle")}
+</Text>
               </>
             )}
           </TouchableOpacity>

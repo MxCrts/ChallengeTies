@@ -4450,7 +4450,8 @@
   "userId": "User ID",
   "lastLogin": "Last login",
   "auth": {
-    "emailPassword": "Email + password"
+    "emailPassword": "Email + password",
+    "continueWithGoogle": "Continue with Google" 
   },
   "participantsLabel": "Participants"
 ,

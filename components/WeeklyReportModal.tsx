@@ -829,8 +829,15 @@ export default function WeeklyReportModal({
 
   const sheetH = Math.min(H * 0.94, H - insets.top - 6);
 
-  // Jours marqués cette semaine (parmi tous les défis, dédupliqués)
-  const markedCount = data.markedDaysBits.filter(Boolean).length;
+  const safeMarkedDaysBits = Array.isArray(data?.markedDaysBits)
+  ? data.markedDaysBits
+  : [false, false, false, false, false, false, false];
+
+const safeChallenges = Array.isArray(data?.challenges)
+  ? data.challenges
+  : [];
+
+const markedCount = safeMarkedDaysBits.filter(Boolean).length;
 
   return (
     <Modal
@@ -1076,7 +1083,7 @@ export default function WeeklyReportModal({
                     })}
                   </Text>
                   <WeekDaysDots
-   markedDaysBits={data.markedDaysBits}
+   markedDaysBits={safeMarkedDaysBits}
    isDark={isDark}
    t={t}
  />
@@ -1154,7 +1161,7 @@ export default function WeeklyReportModal({
             </Animated.View>
 
             {/* ── 4. Défis de la semaine ── */}
-            {data.challenges.length > 0 && (
+            {safeChallenges.length > 0 && (
               <Animated.View
                 entering={FadeInDown.delay(400).duration(360)}
                 style={{ gap: ns(10) }}
@@ -1191,7 +1198,7 @@ export default function WeeklyReportModal({
                   </Text>
                 </View>
 
-                {data.challenges.map((stat, i) => (
+                {safeChallenges.map((stat, i) => (
                   <ChallengeRow
                     key={stat.id}
                     stat={stat}

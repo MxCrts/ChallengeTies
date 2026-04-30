@@ -22,6 +22,14 @@
           }
         },
         {
+          "client_id": "344780684076-ma1anhhf70ekigvse9h4ja81scij929j.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.mxcrts.ChallengeTies",
+            "certificate_hash": "86d423b106cb46670ac96dc52b937a49bec1c8a1"
+          }
+        },
+        {
           "client_id": "344780684076-vmiqmu2jabad5hij6kfqif3sjmsnlrio.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {

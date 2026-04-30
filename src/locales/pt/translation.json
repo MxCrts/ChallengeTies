@@ -4730,7 +4730,8 @@
   "userId": "ID do usuário",
   "lastLogin": "Último login",
   "auth": {
-    "emailPassword": "E-mail e senha"
+    "emailPassword": "E-mail e senha",
+    "continueWithGoogle": "Continuar com Google"
   },
   "participantsLabel": "Participantes"
 ,

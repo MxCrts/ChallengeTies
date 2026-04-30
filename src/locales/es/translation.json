@@ -2752,7 +2752,8 @@
   "userId": "ID de usuario",
   "lastLogin": "Último inicio de sesión",
   "auth": {
-    "emailPassword": "Correo electrónico y contraseña"
+    "emailPassword": "Correo electrónico y contraseña",
+    "continueWithGoogle": "Continuar con Google" 
   },
   "participantsLabel": "Participantes"
 ,

@@ -2765,7 +2765,8 @@
   "userId": "यूज़र आईडी",
   "lastLogin": "अंतिम लॉगिन",
   "auth": {
-    "emailPassword": "ईमेल + पासवर्ड"
+    "emailPassword": "ईमेल + पासवर्ड",
+    "continueWithGoogle": "Google के साथ जारी रखें" 
   },
   "participantsLabel": "प्रतिभागी"
 ,

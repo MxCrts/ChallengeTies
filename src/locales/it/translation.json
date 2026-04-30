@@ -2693,7 +2693,8 @@
   "userId": "ID utente",
   "lastLogin": "Ultimo accesso",
   "auth": {
-    "emailPassword": "Email e password"
+    "emailPassword": "Email e password",
+     "continueWithGoogle": "Continua con Google"
   },
   "participantsLabel": "Partecipanti"
 ,
