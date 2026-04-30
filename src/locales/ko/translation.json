@@ -557,6 +557,7 @@
 
 "challengeDetails": {
   "reviewsSubtitle": "더 나은 선택을 위한 실제 리뷰.",
+  "daysLeft": "{{count}}일 남음",
       "noReviewsHint": "유용한 후기를 처음으로 남겨보세요. 10초면 충분, 진짜 영향.",
       "reviewPrivacy": "유용하고, 명확하고, 친절하게 작성해 주세요.",
   "cta_take": "챌린지 시작",
@@ -1494,6 +1495,11 @@
   "addInterestsHere": "내 카테고리 선택",
 "matching": {
   "sectionTitle": "듀오 & 초대",
+   "searchPlaceholder": "사용자 이름으로 검색…",
+      "searchingUser": "프로필 검색 중…",
+      "searchError": "이 프로필을 검색할 수 없습니다.",
+      "noSearchResultTitle": "프로필을 찾을 수 없음",
+      "noSearchResultDesc": "사용자 이름을 확인하거나 상대에게 듀오 가능 상태를 켜 달라고 요청하세요.",
   "duoAvailableLabel": "듀오 참여 가능",
   "duoAvailableOn": "매칭에 표시됩니다",
   "duoAvailableOff": "매칭에 표시되지 않습니다",
@@ -2536,6 +2542,18 @@
 },
   "notificationsPush": {
     "daily1": "오늘 한 번의 챌린지가 하루를 바꿔. 준비됐어?",
+    "dailyPersonal1": "✅ \"{{title}}\"이(가) 오늘 당신을 기다리고 있어요.",
+"dailyPersonal2": "🔥 \"{{title}}\" 또 하루. 가자.",
+"dailyPersonal3": "⚡ \"{{title}}\" — 탭 한 번으로 체크인.",
+"dailyPersonalMulti1": "✅ \"{{title}}\" 외 {{count}}개 더 확인 필요.",
+"dailyPersonalMulti2": "🔥 오늘 {{count}}개의 챌린지가 기다리고 있어요.",
+"latePersonal1": "⏰ \"{{title}}\" — 몇 시간 남았어요.",
+"latePersonal2": "🚨 오늘 밤 \"{{title}}\"을(를) 포기하지 마세요.",
+"latePersonal3": "🔥 \"{{title}}\" 체크인을 기다리고 있어요. 마지막 기회.",
+"latePersonalMulti1": "⏰ \"{{title}}\" 외 {{count}}개 미체크인.",
+"latePersonalMulti2": "🚨 {{count}}개 챌린지 미완료. 오늘 밤이 기회예요.",
+"streakDangerPersonal1": "🚨 \"{{title}}\" — 스트릭 위험. 자정 전에 체크인하세요.",
+"streakDangerPersonal2": "⚠️ \"{{title}}\" 스트릭 위태롭습니다. 몇 시간 남았어요.",
     "postCompletionTitle": "🔥 다음 준비됐어?",
     "postCompletionBody": "챌린지를 완료했어. 다음 도전은 뭐야?",
     "streakDangerTitle": "🚨 스트릭 위기!",
@@ -2685,7 +2703,7 @@
     "todayHub": {
       "primaryMark": "오늘 체크인",
       "duoNudge": "파트너가 내일 널 볼 거야 →", 
-      "markHint": "여기를 눌러 챌린지를 기록해", 
+      "markHint": "부분적이어도 인정됩니다. 탭 한 번이면 충분해요.",
       "tapToOpen": "챌린지 보기 →",
       "ctaSub": "오늘 하루를 1탭으로 확인",
 "progressLabel": "{{percent}}% 완료",
@@ -2847,6 +2865,49 @@
     "continue": "계속",
     "errorTitle": "오류"
   },
+  "journal": {
+      "sectionTitle": "일지",
+      "title": "일지",
+      "entries": "항목",
+      "seeAll": "전체 보기 →",
+      "daysMarked": "일",
+      "logsCount": "로그",
+      "topMood": "기분",
+      "recent": "최근",
+      "emptyHint": "일을 표시하여 여기서 기록을 확인하세요.",
+      "markedNoLog": "표시됨 ✓",
+      "noLog": "로그 없음",
+      "tapToClose": "탭하여 닫기",
+      "challengeProgress": "진행도 · {{done}}/{{total}}",
+      "empty": {
+        "title": "아직 항목이 없습니다",
+        "sub": "체크인할 때마다 기분, 수치, 자유 메모를 기록할 수 있어요."
+      },
+      "legend": {
+        "future": "예정",
+        "done": "표시됨",
+        "mood": "기분 포함"
+      }
+    },
+    "perf": {
+      "sheet": {
+        "title": "어떻게 됐나요?",
+        "sub": "모두 선택 사항 · 기록을 풍부하게 합니다",
+        "valueLabel": "수치 ({{unit}})",
+        "valueLabelGeneric": "달성한 수치 (선택 사항)",
+        "valuePlaceholder": "목표: {{target}}{{unit}}",
+        "valuePlaceholderGeneric": "예: 8000, 2.5, 45…",
+        "noteLabel": "메모 (선택 사항)",
+        "notePlaceholder": "무슨 일이 있었는지, 느낌, 상황…",
+        "cta": "저장",
+        "skip": "건너뛰기"
+      },
+      "mood": {
+        "perfect": "완벽",
+        "good": "좋음",
+        "hard": "힘듦"
+      }
+    },
 
   "notificationsScreen": {
     "title": "초대 & 알림",
@@ -5059,23 +5120,36 @@
   "noMark": "이날 챌린지 없음"
 },
 "weeklyReport": {
-  "sectionTitle": "주간 보고서",
-  "btnTitle": "이번 주 보고서",
-  "btnSubAvailable": "보고서 준비됨 — 내 모멘텀 보기",
-  "btnSubEmpty": "활동적인 주 이후 매주 월요일에 제공",
+  "sectionTitle": "주간 리포트",
+  "scoreElite": "🔥 엘리트",
+"scoreGood": "⚡ 최상의 컨디션",
+"scoreMid": "💪 나아가는 중",
+"scoreIrregular": "😐 불규칙",
+"scoreLow": "😴 재시작 필요",
+"vsPrevWeek": "지난주 대비",
+"dayMon": "월", "dayTue": "화", "dayWed": "수",
+"dayThu": "목", "dayFri": "금", "daySat": "토", "daySun": "일",
+"streakUnit": "일",
+  "btnTitle": "이번 주 리포트",
+  "btnSubAvailable": "리포트 준비됨 — 모멘텀 확인",
+  "btnSubEmpty": "활동적인 한 주 후 매주 월요일 제공",
   "newBadge": "보기",
-  "noReportTitle": "아직 보고서 없음",
-  "noReportDesc": "일주일 활동 후 다음 월요일에 첫 번째 보고서를 확인할 수 있습니다.",
-  "kicker": "주간 보고서",
+  "noReportTitle": "아직 리포트 없음",
+  "noReportDesc": "첫 번째 리포트는 일주일 활동 후 다음 월요일에 제공됩니다.",
+  "kicker": "주간 요약",
   "title": "나의 모멘텀",
-  "activeDays": "활동 일수",
+  "activeDays": "활동일",
   "trophies": "트로피",
   "momentum": "모멘텀",
+  "streak": "최고 연속",
   "daysOfWeek": "이번 주",
   "diagTitle": "내가 보는 것",
   "goalTitle": "이번 주 목표",
-  "goalAccept": "도전을 받아들입니다 💪",
-  "close": "닫기"
+  "goalSub": "나의 페이스에 따라 자동 설정",
+  "goalAccept": "도전 수락 💪",
+  "close": "닫기",
+  "challengesSection": "나의 챌린지",
+  "globalProgress": "전체 진행률"
 },
 "forge": {
   "title": "대장간",

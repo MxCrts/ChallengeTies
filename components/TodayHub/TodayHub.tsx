@@ -868,7 +868,7 @@ export default function TodayHub(props: Props) {
     marginTop: normalize(3),
   }}>
     {t("homeZ.todayHub.markHint", {
-      defaultValue: "Appuie ici pour cocher ton défi du jour",
+      defaultValue: "Même partiel, ça compte. 1 tap suffit.",
     })}
   </Text>
 )}

@@ -115,6 +115,7 @@ import ForgeIntentionModal from "../../components/ForgeIntentionModal";
 import WeeklyReportModal, { type WeeklyReportData } from "../../components/WeeklyReportModal";
 import ChoixDuoModal from "../../components/ChoixDuoModal";
 import { QUEST_DAILY_BONUS_CLAIMED, QUEST_INVITATION_SENT, QUEST_CHALLENGE_EXPLORED } from "@/src/hooks/useOnboardingQuests";
+import PerformanceLogSheet from "@/components/PerformanceLogSheet";
 
 const getScreen = () => Dimensions.get("window");
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = getScreen();
@@ -468,6 +469,7 @@ const discoverYRef = useRef(0);
 const [firstMarkModalVisible, setFirstMarkModalVisible] = useState(false);
 const [choixDuoModalVisible, setChoixDuoModalVisible] = useState(false);
 
+
 useEffect(() => {
   return () => {
     Object.values(imgRetryTimerRef.current).forEach((t) => clearTimeout(t));
@@ -513,7 +515,6 @@ const scheduleImageRetry = useCallback((id: string) => {
 
 useEffect(() => {
   const sub = DeviceEventEmitter.addListener(FIRST_MARK_EVENT, () => {
-    // S'ouvre seulement après que l'user ait physiquement marqué
     setTimeout(() => {
       setFirstMarkModalVisible(true);
     }, 600);
@@ -1886,10 +1887,10 @@ useEffect(() => {
   return () => { cancelled = true; };
 }, [duoInvitePending, pendingInvite?.id]);
 
-const bonusPulseStyle = useAnimatedStyle(() => {
-  const o = 0.10 + bonusPulse.value * 0.10;
-  return { opacity: o };
-});
+const bonusPulseStyle = useAnimatedStyle(() => ({
+  transform: [{ scale: 0.92 + bonusPulse.value * 0.16 }],
+  opacity: 0.88 + bonusPulse.value * 0.12,
+}));
 
   useEffect(() => {
     fadeAnim.value = withTiming(1, { duration: 1500 });
@@ -2195,25 +2196,6 @@ const firstDayBannerStyle = useAnimatedStyle(() => ({
   transform: [{ translateY: firstDayAnimTranslateY.value }],
 }));
 
-// markToday depuis la home directement
-const handleMarkTodayFromHome = useCallback(async () => {
-  const targetId = primaryActiveId ?? activeChallengeId;
-  if (!targetId) return;
-
-  const ch = currentChallenges.find(
-    (c) => (c.challengeId ?? c.id) === targetId
-  );
-  if (!ch?.selectedDays) return;
-
-  try {
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-  } catch {}
-
-  const res = await markTodayCtx(targetId as string, ch.selectedDays);
-  // Le FIRST_MARK_EVENT est émis automatiquement par le contexte
-  // → FirstMarkModal s'ouvre via le listener existant
-}, [primaryActiveId, activeChallengeId, currentChallenges, markTodayCtx]);
-
 const handleQuestPress = useCallback((questId: QuestId) => {
   switch (questId) {
     case "mark_first_day": {
@@ -2399,7 +2381,7 @@ const handleWeeklyReportGoalAccept = useCallback(async () => {
   handleWeeklyReportClose();
 }, [handleWeeklyReportClose]);
 
-  const handleMarkTodayPress = useCallback(async () => {
+ const handleMarkTodayPress = useCallback(async () => {
   try {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
   } catch {}
@@ -2414,28 +2396,12 @@ const handleWeeklyReportGoalAccept = useCallback(async () => {
     return;
   }
 
-  const ch = currentChallenges.find(
-    (c) => (c.challengeId ?? c.id) === targetId
-  );
-
-  if (!ch?.selectedDays) {
-    safeNavigate(`/challenge-details/${targetId}`, "home-mark-no-selected-days");
-    return;
-  }
-
-  if (isMarkedToday(targetId as string, ch.selectedDays)) {
-    safeNavigate(`/challenge-details/${targetId}`, "home-mark-already-done");
-    return;
-  }
-
-  await handleMarkTodayFromHome();
+  // ✅ Redirige toujours vers challenge-details — point central de marquage
+  safeNavigate(`/challenge-details/${targetId}`, "home-mark-redirect");
 }, [
   primaryActiveId,
   todayHubView.hubChallengeId,
   activeChallengeId,
-  currentChallenges,
-  isMarkedToday,
-  handleMarkTodayFromHome,
   safeNavigate,
 ]);
 
@@ -2995,41 +2961,56 @@ setPostWelcomeAbsorbArmed(true);
               ]}
             >
               {/* Brand row */}
-              <View style={staticStyles.heroBrandRow}>
-                <Image
-                  source={require("../../assets/images/icon2.png")}
-                  style={staticStyles.logoKeynote}
-                  resizeMode="contain"
-                  accessibilityLabel={t("logoChallengeTies")}
-                  transition={180}
-                />
-                {/* ✨ IMPROVED: frosted glass brand pill */}
-                <BlurView
-                  intensity={isDarkMode ? 28 : 20}
-                  tint="dark"
-                  style={staticStyles.heroBrandPillBlur}
-                >
-                  <View style={staticStyles.heroBrandPillInner}>
-                    <Text style={staticStyles.heroBrandPillText} numberOfLines={1}>
-                      {t("homeZ.hero.brand", "CHALLENGETIES")}
-                    </Text>
-                  </View>
-                </BlurView>
-                </View> {/* fin heroBrandRow */}
-
-{userData?.username && (
-  <Text style={{
-    fontSize: normalize(13),
-    fontFamily: "Comfortaa_700Bold",
-    color: "rgba(255,255,255,0.78)",
-    letterSpacing: 0.4,
-    textAlign: "center",
-    marginTop: normalize(-8),
-    marginBottom: normalize(4),
-  }}>
-    {t("homeZ.hero.greeting", { name: userData.username, defaultValue: "Salut {{name}} 👋" })}
-  </Text>
-)}
+              {/* APRÈS */}
+<View style={staticStyles.heroBrandRow}>
+  <Image
+    source={require("../../assets/images/icon2.png")}
+    style={staticStyles.logoKeynote}
+    resizeMode="contain"
+    accessibilityLabel={t("logoChallengeTies")}
+    transition={180}
+  />
+  <BlurView
+  intensity={isDarkMode ? 28 : 20}
+  tint="dark"
+  style={[staticStyles.heroBrandPillBlur, { flexShrink: 1, maxWidth: normalize(290) }]}
+>
+    <View style={staticStyles.heroBrandPillInner}>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: normalize(6) }}>
+        <Text
+          style={staticStyles.heroBrandPillText}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.75}
+        >
+          {t("homeZ.hero.brand", "CHALLENGETIES")}
+        </Text>
+        {userData?.username && (
+          <>
+            <View style={{
+              width: 1,
+              height: normalize(12),
+              backgroundColor: "rgba(255,255,255,0.30)",
+            }} />
+            <Text
+              style={{
+                fontSize: normalize(12),
+                fontFamily: "Comfortaa_700Bold",
+                color: "rgba(255,255,255,0.82)",
+                letterSpacing: 0.2,
+              }}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.80}
+            >
+              {t("homeZ.hero.greetingShort", { name: userData.username, defaultValue: "Salut {{name}} 👋" })}
+            </Text>
+          </>
+        )}
+      </View>
+    </View>
+  </BlurView>
+</View>
 
               {/* Punchline */}
               <Text
@@ -3284,6 +3265,7 @@ setPostWelcomeAbsorbArmed(true);
           </View>
 
         {/* ════ ONBOARDING QUEST BANNER ════ */}
+        
   <View style={{ zIndex: 1, elevation: 1 }} pointerEvents="box-none">
     <OnboardingQuestBanner
    onQuestPress={handleQuestPress}
@@ -3428,14 +3410,38 @@ setPostWelcomeAbsorbArmed(true);
             borderColor: isDarkMode ? "rgba(255,255,255,0.10)" : "rgba(2,6,23,0.09)",
             backgroundColor: isDarkMode ? "rgba(30,41,59,0.90)" : "#FFFFFF",
           }}>
-            <View style={{
-              width: normalize(44), height: normalize(44),
-              borderRadius: normalize(22),
-              alignItems: "center", justifyContent: "center",
-              backgroundColor: isDarkMode ? "rgba(249,115,22,0.12)" : "rgba(249,115,22,0.08)",
-            }}>
-              <Ionicons name="gift-outline" size={normalize(22)} color="#F97316" />
-            </View>
+            <View style={{ position: "relative" }}>
+  <View style={{
+    width: normalize(44), height: normalize(44),
+    borderRadius: normalize(22),
+    alignItems: "center", justifyContent: "center",
+    backgroundColor: isDarkMode ? "rgba(249,115,22,0.15)" : "rgba(249,115,22,0.10)",
+  }}>
+    <Ionicons name="gift-outline" size={normalize(22)} color="#F97316" />
+  </View>
+  {/* Badge DISPO pulsant */}
+  <Animated.View style={[bonusPulseStyle, {
+    position: "absolute",
+    top: -normalize(2),
+    right: -normalize(2),
+    backgroundColor: "#F97316",
+    borderRadius: normalize(999),
+    paddingHorizontal: normalize(5),
+    paddingVertical: normalize(2),
+    borderWidth: 1.5,
+    borderColor: isDarkMode ? "#080C14" : "#FFFFFF",
+    minWidth: normalize(18),
+    alignItems: "center",
+    justifyContent: "center",
+  }]}>
+    <Text style={{
+      fontFamily: "Comfortaa_700Bold",
+      fontSize: normalize(7.5),
+      color: "#0B1120",
+      letterSpacing: 0.3,
+    }}>1</Text>
+  </Animated.View>
+</View>
             <Text style={{
               fontFamily: "Comfortaa_700Bold",
               fontSize: normalize(11.5),
@@ -5234,21 +5240,29 @@ const staticStyles = StyleSheet.create({
   heroBrandPillBlur: {
     borderRadius: normalize(999),
     overflow: "hidden",
+    flexShrink: 1,                // ← AJOUT
+  maxWidth: normalize(300), 
   },
-  heroBrandPillInner: {
-    paddingHorizontal: normalize(18),
-    paddingVertical: normalize(9),
-    borderRadius: normalize(999),
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "rgba(255,255,255,0.28)",
-    backgroundColor: "rgba(0,0,0,0.18)",
-  },
-  heroBrandPillText: {
-    fontSize: normalize(13),
-    fontFamily: "Comfortaa_700Bold",
-    color: "#FFFFFF",
-    letterSpacing: 1.8,
-  },
+ heroBrandPillText: {
+  fontSize: normalize(11),      // ← encore réduit
+  fontFamily: "Comfortaa_700Bold",
+  color: "#FFFFFF",
+  letterSpacing: 0.6,           // ← quasi zéro letterSpacing
+  flexShrink: 1,
+},
+
+heroBrandPillInner: {
+  paddingHorizontal: normalize(12),
+  paddingVertical: normalize(8),
+  borderRadius: normalize(999),
+  borderWidth: StyleSheet.hairlineWidth,
+  borderColor: "rgba(255,255,255,0.28)",
+  backgroundColor: "rgba(0,0,0,0.18)",
+  maxWidth: normalize(300),
+  flexDirection: "row",         // ← AJOUT pour que les enfants soient en ligne
+  alignItems: "center",
+  flexShrink: 1,
+},
   heroTitleKeynote: {
     width: "100%",
     maxWidth: CONTENT_W,

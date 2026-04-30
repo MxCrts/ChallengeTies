@@ -127,6 +127,8 @@ import ForgeIntentionModal from "../../components/ForgeIntentionModal";
 import { translateChallenge } from "../../services/translationService";
 import { DeviceEventEmitter } from "react-native";
 import { QUEST_CHALLENGE_EXPLORED } from "@/src/hooks/useOnboardingQuests";
+import PerformanceLogSheet from "@/components/PerformanceLogSheet";
+import ChallengeJournal from "@/components/ChallengeJournal";
 
 const hapticTap = () => {
   Haptics.selectionAsync().catch(() => {});
@@ -330,16 +332,14 @@ export default function ChallengeDetails() {
   const { user } = useAuth();
   const { width: W, height: H } = useWindowDimensions();
   const isTablet = W >= 700;
-  const heroH = useMemo(
-    () => Math.max(240, Math.round(H * 0.35)),
-    [H]
-  );
+  const heroH = useMemo(() => Math.min(360, Math.max(240, Math.round(H * 0.35))), [H]);
   const titleLines = isTablet ? 2 : 3;
   const [marking, setMarking] = useState(false);
   const [pendingOutLock, setPendingOutLock] = useState(false);
   const [duoMomentPayload, setDuoMomentPayload] = useState<any>(null);
   const [missedChallengeVisible, setMissedChallengeVisible] = useState(false);
   const [soloBarWidth, setSoloBarWidth] = useState(0);
+  const [localPerformanceLogs, setLocalPerformanceLogs] = useState<Record<string, any>>({});
   const [activeEntry, setActiveEntry] = useState<any>(null);
   const [outgoingPendingInvite, setOutgoingPendingInvite] = useState<{
   id: string;
@@ -353,6 +353,9 @@ export default function ChallengeDetails() {
 } | null>(null);
 const [duoMomentVisible, setDuoMomentVisible] = useState(false);
 const [soloMomentVisible, setSoloMomentVisible] = useState(false);
+const [perfLogVisible, setPerfLogVisible] = useState(false);
+const [perfLogDateKey, setPerfLogDateKey] = useState("");
+const pendingMomentRef = useRef<(() => void) | null>(null);
 const [soloMomentDayIndex, setSoloMomentDayIndex] = useState(0);
 const [soloMomentTotalDays, setSoloMomentTotalDays] = useState(0);
 const [soloMomentStreak, setSoloMomentStreak] = useState<number | undefined>(undefined);
@@ -636,6 +639,7 @@ const shouldEnterAnim =
   useEffect(() => {
     activeEntryRef.current = activeEntry;
   }, [activeEntry]);
+  
 
 // ✅ Résout UNE seule entrée "courante" avec priorité DUO (si présente)
  const currentChallenge = useMemo(() => {
@@ -646,6 +650,10 @@ const shouldEnterAnim =
    const duo = matches.find((m) => !!m.duo);
    return duo || matches[0];
  }, [currentChallenges, id]);
+
+ useEffect(() => {
+  setLocalPerformanceLogs((currentChallenge as any)?.performanceLogs ?? {});
+}, [currentChallenge?.uniqueKey, (currentChallenge as any)?.performanceLogs]);
 
  // 🧠 Duo dérivé de façon déterministe à partir du uniqueKey + userId
  const derivedDuo = useMemo(
@@ -2273,6 +2281,7 @@ const handleMarkTodayPress = useCallback(async () => {
   try {
     markBusyRef.current = true;
     setMarking(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
 
     const duoSnap =
       isDuo
@@ -2326,7 +2335,7 @@ if (res?.completed || (cap > 0 && optimisticNext >= cap)) {
 }
 
 
-    const momentFn = () =>
+      const momentFn = () =>
       openMomentModal({
         isDuo: !!isDuo,
         myDoneAfter: optimisticNext,
@@ -2336,8 +2345,12 @@ if (res?.completed || (cap > 0 && optimisticNext >= cap)) {
         partnerTotal: duoSnap?.partnerTotal,
       });
 
-    // ✅ si missed visible à cet instant, on diffère
-    tryOpenMomentOrDefer(momentFn);
+    // ✅ Ouvre d'abord le PerformanceLogSheet,
+    // le MomentModal s'ouvrira à la fermeture du sheet
+    const todayKey = new Date().toISOString().slice(0, 10);
+    setPerfLogDateKey(todayKey);
+    pendingMomentRef.current = () => tryOpenMomentOrDefer(momentFn);
+    setPerfLogVisible(true);
 
     await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     try { await bumpCounterAndMaybeReview(`markToday:${id}:${finalSelectedDays}`, 7); } catch {}
@@ -2443,7 +2456,7 @@ const scrollContentStyle = useMemo(
       </Animated.View>
       {/* ── SKELETON hors ScrollView ── */}
       {isHydrating && (
-        <View style={[StyleSheet.absoluteFill, { zIndex: 10 }]} pointerEvents="none">
+      <View style={[StyleSheet.absoluteFill, { zIndex: 5 }]} pointerEvents="none">
           <SkeletonChallengeDetails
             isDarkMode={isDarkMode}
             heroH={heroH}
@@ -2460,6 +2473,7 @@ const scrollContentStyle = useMemo(
         contentContainerStyle={scrollContentStyle}
         contentInsetAdjustmentBehavior="never"
         overScrollMode="never"
+        bounces={false}
         scrollEventThrottle={16}
       >
   <View style={[styles.imageContainer, { height: heroH }]}>
@@ -2570,7 +2584,10 @@ const scrollContentStyle = useMemo(
     >
       <Ionicons name="time-outline" size={13} color={isDarkMode ? "#FFD700" : "#FF9F1C"} />
       <Text style={[styles.chipText, { color: isDarkMode ? "#FFD700" : "#FF9F1C", fontFamily: "Comfortaa_700Bold" }]}>
-        {finalSelectedDays - finalCompletedDays}j restants
+        {t("challengeDetails.daysLeft", {
+     count: finalSelectedDays - finalCompletedDays,
+     defaultValue: `${finalSelectedDays - finalCompletedDays}j restants`,
+   })}
       </Text>
     </View>
   )}
@@ -2584,6 +2601,9 @@ const scrollContentStyle = useMemo(
           borderColor: isDarkMode ? "rgba(0,255,255,0.28)" : "rgba(55,48,163,0.20)",
         },
       ]}
+      accessible={true}
+      accessibilityLabel={t("duo.title") + " " + t("challengeDetails.modeChip")}
+      accessibilityRole="text"
     >
       <Ionicons name="people-outline" size={13} color={isDarkMode ? "#00FFFF" : "#3730A3"} />
       <Text style={[styles.chipText, { color: isDarkMode ? "#00FFFF" : "#3730A3" }]}>{t("duo.title")}</Text>
@@ -3097,7 +3117,8 @@ const scrollContentStyle = useMemo(
 )}
 
           {challengeTakenOptimistic &&
-  !(finalSelectedDays > 0 && finalCompletedDays >= finalSelectedDays) && (
+  finalSelectedDays > 0 &&
+  !(finalCompletedDays >= finalSelectedDays) && (
   <Animated.View entering={firstMountRef.current && shouldEnterAnim ? FadeInUp.delay(200) : undefined}
     style={styles.progressSection}
   >
@@ -3377,7 +3398,17 @@ const scrollContentStyle = useMemo(
     <View style={styles.duoBattleRail} pointerEvents="none" />
     <Animated.View style={[styles.duoBattleLeft, duoBattleLeftAnimStyle]} />
 <Animated.View style={[styles.duoBattleRight, duoBattleRightAnimStyle]} />
-    <View style={[styles.duoBattleDivider, { backgroundColor: isDarkMode ? "rgba(255,255,255,0.55)" : "rgba(0,0,0,0.20)", opacity: 1 }]} pointerEvents="none" />
+    <View
+   pointerEvents="none"
+   style={[
+     styles.duoBattleDivider,
+     {
+       backgroundColor: isDarkMode ? "#FFFFFF" : "#1A1A1A",
+       opacity: 0.7,
+       zIndex: 2, // ✅ toujours au-dessus des barres
+     },
+   ]}
+ />
   </View>
 </View>
 
@@ -3488,16 +3519,22 @@ const scrollContentStyle = useMemo(
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
         >
-          <Text
-            style={[
-              styles.markTodayButtonText,
-              { color: currentTheme.colors.textPrimary },
-            ]}
-          >
-            {marking
-              ? t("commonS.sending", { defaultValue: "Envoi..." })
-              : t("challengeDetails.markToday")}
-          </Text>
+          <View style={{ flex: 1, alignItems: "center" }}>
+           <Text style={[styles.markTodayButtonText, { color: currentTheme.colors.textPrimary }]}>
+             {marking ? t("commonS.sending", { defaultValue: "Envoi..." }) : t("homeZ.todayHub.primaryActiveShort", { defaultValue: "Check in" })}
+           </Text>
+           {!marking && (
+             <Text style={{
+               fontFamily: "Comfortaa_400Regular",
+               fontSize: normalizeSize(11),
+               color: "rgba(11,17,32,0.78)",
+               marginTop: normalizeSize(3),
+               includeFontPadding: false,
+             }}>
+               {t("homeZ.todayHub.markHint", { defaultValue: "Même partiel, ça compte. 1 tap suffit." })}
+             </Text>
+           )}
+         </View>
         </LinearGradient>
       )}
     </TouchableOpacity>
@@ -3581,7 +3618,7 @@ const scrollContentStyle = useMemo(
         isDarkMode ? "rgba(14,14,18,0.85)" : "rgba(255,255,255,0.85)",
       ]}
       style={{
-        position: "absolute", bottom: 0, left: 0, right: 0, height: 36,
+        position: "absolute", bottom: 0, left: 0, right: 0, height: normalizeSize(48),
       }}
     />
   )}
@@ -3604,6 +3641,21 @@ const scrollContentStyle = useMemo(
     </Pressable>
   )}
 </View>
+
+{/* ── JOURNAL ── visible seulement si challenge pris */}
+          {challengeTakenOptimistic && (
+            <View style={{ marginTop: SPACING * 1.5 }}>
+              <ChallengeJournal
+                completionDateKeys={
+                  currentChallenge?.completionDateKeys ?? []
+                }
+                performanceLogs={localPerformanceLogs}
+                selectedDays={finalSelectedDays}
+                isDarkMode={isDarkMode}
+                t={t}
+              />
+            </View>
+          )}
             
         {/* ACTIONS */}
 <View style={styles.actionsWrap}>
@@ -4043,7 +4095,7 @@ partnerDaysCompleted={duoChallengeData?.duoUser?.completedDays ?? 0}
     style={[
       styles.warmupToastWrap,
       warmupToastStyle,
-      { bottom: tabBarHeight + insets.bottom + 14 },
+      { bottom: Math.max(14, tabBarHeight + insets.bottom + 14) },
     ]}
   >
     <BlurView
@@ -4138,6 +4190,33 @@ partnerDaysCompleted={duoChallengeData?.duoUser?.completedDays ?? 0}
   selectedDays={localSelectedDays}
 />
 <RequireAuthModal visible={modalVisible} onClose={closeGate} />
+
+<PerformanceLogSheet
+  visible={perfLogVisible}
+  challengeId={id}
+  uniqueKey={currentChallenge?.uniqueKey ?? ""}
+  dateKey={perfLogDateKey}
+  unit={(currentChallenge as any)?.unit ?? null}
+  targetValue={(currentChallenge as any)?.targetValue ?? null}
+  isDarkMode={isDarkMode}
+  t={t}
+  onSaved={(log) => {
+    setLocalPerformanceLogs((prev) => ({
+      ...prev,
+      [perfLogDateKey]: log,
+    }));
+  }}
+  onDismiss={() => {
+    setPerfLogVisible(false);
+
+    const pending = pendingMomentRef.current;
+    pendingMomentRef.current = null;
+
+    if (pending) {
+      setTimeout(pending, 320);
+    }
+  }}
+/>
 
       </SafeAreaView>
     </LinearGradient>

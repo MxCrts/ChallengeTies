@@ -559,7 +559,7 @@
     "todayHub": {
       "primaryMark": "今天打卡",
       "duoNudge": "你的伙伴明天会看到你 →",
-       "markHint": "点击这里打卡你的挑战", 
+       "markHint": "即使部分完成也算数。一次点击就够了。",
        "tapToOpen": "查看挑战 →",
       "ctaSub": "1次点击完成今日打卡",
 "progressLabel": "{{percent}}% 已完成",
@@ -824,6 +824,11 @@
   "addInterestsHere": "选择我的分类",
 "matching": {
   "sectionTitle": "双人组与邀请",
+  "searchPlaceholder": "按用户名搜索…",
+      "searchingUser": "正在搜索个人资料…",
+      "searchError": "无法搜索此个人资料。",
+      "noSearchResultTitle": "未找到个人资料",
+      "noSearchResultDesc": "请检查用户名，或让对方开启双人挑战可用状态。",
   "duoAvailableLabel": "可加入双人组",
   "duoAvailableOn": "你出现在匹配中",
   "duoAvailableOff": "你不出现在匹配中",
@@ -1234,22 +1239,35 @@
 },
 "weeklyReport": {
   "sectionTitle": "每周报告",
-  "btnTitle": "本周报告",
-  "btnSubAvailable": "报告已就绪 — 查看我的进展",
-  "btnSubEmpty": "每周一活跃一周后可用",
+  "btnTitle": "我的每周报告",
+  "scoreElite": "🔥 精英",
+"scoreGood": "⚡ 状态佳",
+"scoreMid": "💪 前进中",
+"scoreIrregular": "😐 不稳定",
+"scoreLow": "😴 需要重启",
+"vsPrevWeek": "对比上周",
+"dayMon": "一", "dayTue": "二", "dayWed": "三",
+"dayThu": "四", "dayFri": "五", "daySat": "六", "daySun": "日",
+"streakUnit": "天",
+  "btnSubAvailable": "报告已就绪 — 查看我的动力",
+  "btnSubEmpty": "每周一活跃一周后可查看",
   "newBadge": "查看",
   "noReportTitle": "暂无报告",
-  "noReportDesc": "经过一周的活动后，您的首份报告将于下周一提供。",
-  "kicker": "每周报告",
+  "noReportDesc": "您的第一份报告将在下周一活跃一周后发布。",
+  "kicker": "本周总结",
   "title": "你的动力",
   "activeDays": "活跃天数",
   "trophies": "奖杯",
   "momentum": "动力",
+  "streak": "最佳连续",
   "daysOfWeek": "本周",
   "diagTitle": "我看到的",
   "goalTitle": "本周目标",
+  "goalSub": "根据你的节奏自动设定",
   "goalAccept": "接受挑战 💪",
-  "close": "关闭"
+  "close": "关闭",
+  "challengesSection": "你的挑战",
+  "globalProgress": "整体进度"
 },
 "forge": {
   "title": "熔炉",
@@ -1296,6 +1314,7 @@
 ,
 "challengeDetails": {
   "reviewsSubtitle": "真实评价，帮助更好选择。",
+  "daysLeft": "剩余{{count}}天",
       "noReviewsHint": "做第一个留下有用评价的人。10 秒钟，真实影响。",
       "reviewPrivacy": "保持有用、清晰、友善。",
   "cta_take": "开始挑战",
@@ -1693,6 +1712,49 @@
     "placeholderDescription": "描述（可选）",
     "submitButton": "提交提案"
   },
+  "journal": {
+      "sectionTitle": "日记",
+      "title": "日记",
+      "entries": "条记录",
+      "seeAll": "查看全部 →",
+      "daysMarked": "天",
+      "logsCount": "日志",
+      "topMood": "心情",
+      "recent": "最近",
+      "emptyHint": "开始标记天数，在这里查看你的历史记录。",
+      "markedNoLog": "已标记 ✓",
+      "noLog": "无日志",
+      "tapToClose": "点击关闭",
+      "challengeProgress": "进度 · {{done}}/{{total}}",
+      "empty": {
+        "title": "暂无记录",
+        "sub": "每次打卡后，你可以记录心情、数值和备注。"
+      },
+      "legend": {
+        "future": "待完成",
+        "done": "已标记",
+        "mood": "含心情"
+      }
+    },
+    "perf": {
+      "sheet": {
+        "title": "今天怎么样？",
+        "sub": "均为选填 · 丰富你的记录",
+        "valueLabel": "数值（{{unit}}）",
+        "valueLabelGeneric": "达到的数值（选填）",
+        "valuePlaceholder": "目标：{{target}}{{unit}}",
+        "valuePlaceholderGeneric": "例如：8000、2.5、45…",
+        "noteLabel": "备注（选填）",
+        "notePlaceholder": "发生了什么，感受，背景…",
+        "cta": "保存",
+        "skip": "跳过"
+      },
+      "mood": {
+        "perfect": "完美",
+        "good": "不错",
+        "hard": "艰难"
+      }
+    },
   "missedChallenge": {
     "adNotReady": "广告还没准备好，请稍后再试。",
     "confirmResetTitle": "确认？",
@@ -4921,6 +4983,18 @@
 },
   "notificationsPush": {
     "daily1": "今天完成一个挑战，就能改变这一天。准备好了吗？",
+    "dailyPersonal1": "✅「{{title}}」今天在等你。",
+"dailyPersonal2": "🔥「{{title}}」又一天。加油。",
+"dailyPersonal3": "⚡「{{title}}」— 一键打卡。",
+"dailyPersonalMulti1": "✅「{{title}}」和另外 {{count}} 个挑战待完成。",
+"dailyPersonalMulti2": "🔥 今天有 {{count}} 个挑战等着你。",
+"latePersonal1": "⏰「{{title}}」— 还有几小时。",
+"latePersonal2": "🚨 今晚不要放弃「{{title}}」。",
+"latePersonal3": "🔥「{{title}}」等你打卡。最后机会。",
+"latePersonalMulti1": "⏰「{{title}}」和另外 {{count}} 个未打卡。",
+"latePersonalMulti2": "🚨 {{count}} 个挑战未完成。今晚是你的机会。",
+"streakDangerPersonal1": "🚨「{{title}}」— 连击告急。午夜前打卡。",
+"streakDangerPersonal2": "⚠️「{{title}}」连击岌岌可危。还有几小时。",
     "postCompletionTitle": "🔥 准备好下一个了吗?",
     "postCompletionBody": "你完成了一个挑战。下一步是什么？",
     "streakDangerTitle": "🚨 连击岌岌可危！",

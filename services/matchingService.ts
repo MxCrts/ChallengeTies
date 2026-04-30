@@ -31,6 +31,7 @@ const REGION = "europe-west1";
 export interface MatchingPoolEntry {
   uid: string;
   username: string;
+usernameLower?: string;
   profileImage: string | null;
   region: string | null;
   completedChallengesCount: number;
@@ -74,6 +75,11 @@ export interface MatchingInvitation {
 
 const concreteExpiry = (hours = 72) =>
   Timestamp.fromDate(new Date(Date.now() + hours * 60 * 60 * 1000));
+
+const normalizeUsername = (v: unknown): string =>
+  String(v || "")
+    .trim()
+    .toLowerCase();
 
 function extractSoloChallenges(currentChallenges: any[]): {
   ids: string[];
@@ -162,10 +168,13 @@ export async function updateMatchingPool(uid: string): Promise<void> {
       data?.CompletedChallenges || []
     );
 
-    const entry: Record<string, any> = {
-      uid,
-      username: data?.username || data?.displayName || "User",
-      profileImage: data?.profileImage || null,
+    const username = data?.username || data?.displayName || "User";
+
+const entry: Record<string, any> = {
+  uid,
+  username,
+  usernameLower: normalizeUsername(username),
+  profileImage: data?.profileImage || null,
       region: data?.region || null,
       completedChallengesCount: completedCount,
       currentChallengeIds: ids,
@@ -271,6 +280,84 @@ export async function findMatches(opts: {
   );
 
   return candidates.slice(0, limit);
+}
+
+/* =========================
+ * SEARCH MATCHES BY USERNAME
+ * Recherche dans matching_pool uniquement :
+ * - respecte duoAvailable
+ * - évite d’exposer les users non disponibles
+ * - fonctionne même si users.usernameLower n’existe pas
+ * ========================= */
+export async function searchMatchesByUsername(opts: {
+  usernameQuery: string;
+  challengeId: string;
+  challengeCategory: string | null;
+  selectedDays: number;
+  limit?: number;
+}): Promise<MatchCandidate[]> {
+  const me = auth.currentUser?.uid;
+  if (!me) throw new Error("utilisateur non connecté");
+
+  const q = normalizeUsername(opts.usernameQuery);
+  if (q.length < 2) return [];
+
+  const max = opts.limit ?? 12;
+
+  const poolSnap = await getDocs(
+    query(collection(db, "matching_pool"), where("duoAvailable", "==", true))
+  );
+
+  const candidates: MatchCandidate[] = [];
+
+  for (const poolDoc of poolSnap.docs) {
+    const pool = poolDoc.data() as MatchingPoolEntry;
+    if (pool.uid === me) continue;
+
+    const usernameLower = normalizeUsername(pool.usernameLower || pool.username);
+    if (!usernameLower.includes(q)) continue;
+
+    let score = 1;
+    let sharedCategory: string | null = null;
+    let hasSameChallenge = false;
+
+    if (pool.currentChallengeIds?.includes(opts.challengeId)) {
+      score = 3;
+      hasSameChallenge = true;
+      sharedCategory = opts.challengeCategory;
+    } else if (
+      opts.challengeCategory &&
+      pool.currentChallengeCategories?.includes(opts.challengeCategory)
+    ) {
+      score = 2;
+      sharedCategory = opts.challengeCategory;
+    } else if (
+      opts.challengeCategory &&
+      pool.challengeCategories?.includes(opts.challengeCategory)
+    ) {
+      score = 1;
+      sharedCategory = opts.challengeCategory;
+    }
+
+    candidates.push({
+      uid: pool.uid,
+      username: pool.username,
+      profileImage: pool.profileImage,
+      region: pool.region,
+      completedChallengesCount: pool.completedChallengesCount,
+      matchScore: score,
+      sharedCategory,
+      hasSameChallenge,
+    });
+  }
+
+  return candidates
+    .sort((a, b) =>
+      b.matchScore !== a.matchScore
+        ? b.matchScore - a.matchScore
+        : b.completedChallengesCount - a.completedChallengesCount
+    )
+    .slice(0, max);
 }
 
 /* =========================

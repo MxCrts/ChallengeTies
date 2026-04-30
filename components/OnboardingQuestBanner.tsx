@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
+import { LayoutAnimation, UIManager } from "react-native";
 import Svg, { Circle } from "react-native-svg";
 import Animated, {
   FadeIn, FadeOut, FadeInDown, FadeOutUp,
@@ -29,6 +30,10 @@ const ORANGE = "#F97316";
 const GOLD = "#E8B84B";
 const GREEN = "#22C55E";
 const MODAL_SHOWN_KEY = "onboarding.modal.shown.v3";
+
+if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 // ─── ProgressRing — SVG pur, compatible iOS + Android ────────────────────────
 const ProgressRing = React.memo(function ProgressRing({
@@ -496,8 +501,16 @@ export default function OnboardingQuestBanner({
   const { t } = useTranslation();
   const { theme } = useTheme();
   const isDark = theme === "dark";
-  const { visible, state, completedCount, totalCount, progressPct } = useOnboardingQuests();
+  const { visible, state, completedCount, totalCount, progressPct, complete } = useOnboardingQuests();
   const [modalVisible, setModalVisible] = useState(false);
+ const [bannerExpanded, setBannerExpanded] = useState(false);
+
+const toggleBanner = useCallback(() => {
+  LayoutAnimation.configureNext(
+    LayoutAnimation.create(240, "easeInEaseOut", "opacity")
+  );
+  setBannerExpanded(prev => !prev);
+}, []);
 
   const barV = useSharedValue(0);
   useEffect(() => {
@@ -516,6 +529,19 @@ export default function OnboardingQuestBanner({
       pulseV.value = withTiming(1, { duration: 200 });
     }
   }, [completedCount]);
+
+  useEffect(() => {
+  if (!state) return;
+  if (streakCurrent < 3) return;
+
+  const streakQuestDone = state.quests.find(
+    (q) => q.id === "maintain_3day_streak"
+  )?.completed;
+
+  if (streakQuestDone) return;
+
+  complete("maintain_3day_streak").catch(() => {});
+}, [state, streakCurrent, complete]);
   const pulseStyle = useAnimatedStyle(() => ({ transform: [{ scale: pulseV.value }] }));
 
   // FIX CRITIQUE : auto-open bloqué tant que welcomeVisible est true
@@ -550,112 +576,142 @@ export default function OnboardingQuestBanner({
   const allDone = completedCount === totalCount;
   const trophiesLeft = state.quests.filter((q) => !q.completed).reduce((s, q) => s + q.trophies, 0);
 
-  const firstIncomplete = state.quests.find((q) => !q.completed) ?? null;
-  const remainingCount = state.quests.filter((q) => !q.completed).length;
+  const sortedQuests = [...state.quests].sort((a, b) => {
+  if (a.completed !== b.completed) return a.completed ? 1 : -1;
+  return 0;
+});
 
   return (
-    <>
-      <OnboardingModal
-        visible={modalVisible}
-        onClose={() => setModalVisible(false)}
-        onQuestPress={onQuestPress}
-        isDark={isDark}
-        streakCurrent={streakCurrent}
+  <>
+    <OnboardingModal
+      visible={modalVisible}
+      onClose={() => setModalVisible(false)}
+      onQuestPress={onQuestPress}
+      isDark={isDark}
+      streakCurrent={streakCurrent}
+    />
+
+    <View style={{
+      marginHorizontal: ns(12),
+      marginBottom: ns(10),
+      marginTop: ns(4),
+      borderRadius: ns(22),
+      overflow: "hidden",
+      borderWidth: 1,
+      borderColor: allDone ? GREEN + "40" : ORANGE + "30",
+      backgroundColor: bgCard,
+      ...Platform.select({
+        ios: {
+          shadowColor: ORANGE,
+          shadowOpacity: 0.10,
+          shadowRadius: 16,
+          shadowOffset: { width: 0, height: 4 },
+        },
+      }),
+    }}>
+
+      {/* ── TOP LINE ── */}
+      <LinearGradient
+        colors={["transparent", allDone ? GREEN + "90" : ORANGE + "90", allDone ? GREEN + "AA" : GOLD + "AA", allDone ? GREEN + "90" : ORANGE + "90", "transparent"]}
+        start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }}
+        style={{ height: 1.5, marginBottom: ns(10) }}
       />
 
-      <Animated.View
-        entering={FadeInDown.duration(420).springify().damping(16)}
-        exiting={FadeOutUp.duration(280)}
-        style={[bS.wrap, { backgroundColor: bgCard }]}
-        pointerEvents="box-none"
+      {/* ── HEADER (toujours visible) ── */}
+      <Pressable
+        onPress={toggleBanner}
+        style={({ pressed }) => ({
+          paddingHorizontal: ns(14),
+          paddingBottom: ns(8),
+          opacity: pressed ? 0.80 : 1,
+        })}
       >
-        <LinearGradient
-          colors={["transparent", allDone ? GREEN + "90" : ORANGE + "90", allDone ? GREEN + "AA" : GOLD + "AA", allDone ? GREEN + "90" : ORANGE + "90", "transparent"]}
-          start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }}
-          style={bS.topLine}
-        />
+        <View style={{ flexDirection: "row", alignItems: "center", gap: ns(10) }}>
+          <Animated.View style={pulseStyle}>
+            <LinearGradient
+              colors={allDone ? [GREEN + "33", GREEN + "22"] : [ORANGE + "33", GOLD + "22"]}
+              style={bS.headerIcon}
+            >
+              <Ionicons name={allDone ? "trophy" : "flash"} size={ns(17)} color={allDone ? GREEN : ORANGE} />
+            </LinearGradient>
+          </Animated.View>
 
-        <Pressable
-          onPress={() => setModalVisible(true)}
-          style={({ pressed }) => [bS.header, { opacity: pressed ? 0.80 : 1 }]}
-        >
-          <View style={bS.headerRow}>
-            <Animated.View style={pulseStyle}>
-              <LinearGradient
-                colors={allDone ? [GREEN + "33", GREEN + "22"] : [ORANGE + "33", GOLD + "22"]}
-                style={bS.headerIcon}
-              >
-                <Ionicons name={allDone ? "trophy" : "flash"} size={ns(17)} color={allDone ? GREEN : ORANGE} />
-              </LinearGradient>
-            </Animated.View>
-            <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={[bS.headerTitle, { color: textPrim }]} numberOfLines={1}>
-                {allDone
-                  ? t("onboarding.banner.titleDone", { defaultValue: "Onboarding complété 🎉" })
-                  : t("onboarding.banner.title", { defaultValue: "Lance-toi 🔥" })}
-              </Text>
-              <Text style={[bS.headerSub, { color: textSec }]} numberOfLines={1}>
-                {allDone
-                  ? t("onboarding.banner.subtitleDone", { trophies: TOTAL_TROPHIES, defaultValue: `+${TOTAL_TROPHIES} trophées gagnés ✓` })
-                  : completedCount === 0
-                    ? t("onboarding.banner.subtitleNew", { trophies: TOTAL_TROPHIES, defaultValue: `Gagne ${TOTAL_TROPHIES} trophées` })
-                    : t("onboarding.banner.subtitleProgress", { done: completedCount, total: totalCount, left: trophiesLeft, defaultValue: `${completedCount}/${totalCount} · +${trophiesLeft} trophées restants` })}
-              </Text>
-            </View>
-            <View style={bS.expandIcon}>
-              <Ionicons name="grid-outline" size={ns(15)} color={(allDone ? GREEN : ORANGE)} />
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text style={[bS.headerTitle, { color: textPrim }]} numberOfLines={1}>
+              {allDone
+                ? t("onboarding.banner.titleDone", { defaultValue: "Onboarding complété 🎉" })
+                : t("onboarding.banner.title", { defaultValue: "Lance-toi 🔥" })}
+            </Text>
+            <Text style={[bS.headerSub, { color: textSec }]} numberOfLines={1}>
+              {allDone
+                ? t("onboarding.banner.subtitleDone", { trophies: TOTAL_TROPHIES, defaultValue: `+${TOTAL_TROPHIES} trophées gagnés ✓` })
+                : completedCount === 0
+                  ? t("onboarding.banner.subtitleNew", { trophies: TOTAL_TROPHIES, defaultValue: `Gagne ${TOTAL_TROPHIES} trophées` })
+                  : t("onboarding.banner.subtitleProgress", { done: completedCount, total: totalCount, left: trophiesLeft, defaultValue: `${completedCount}/${totalCount} · +${trophiesLeft} trophées restants` })}
+            </Text>
+          </View>
+
+          {/* Mini progress + chevron */}
+          <View style={{ flexDirection: "row", alignItems: "center", gap: ns(8) }}>
+            {!allDone && (
+              <View style={{
+                width: ns(36), height: ns(4),
+                borderRadius: ns(2),
+                backgroundColor: isDark ? "rgba(255,255,255,0.10)" : "rgba(0,0,0,0.08)",
+                overflow: "hidden",
+              }}>
+                <Animated.View style={[{
+                  height: "100%",
+                  borderRadius: ns(2),
+                  backgroundColor: ORANGE,
+                }, barStyle]} />
+              </View>
+            )}
+            <View style={{
+              width: ns(28), height: ns(28),
+              borderRadius: ns(8),
+              alignItems: "center", justifyContent: "center",
+              backgroundColor: isDark ? "rgba(249,115,22,0.08)" : "rgba(249,115,22,0.06)",
+              borderWidth: 1,
+              borderColor: isDark ? "rgba(249,115,22,0.18)" : "rgba(249,115,22,0.10)",
+            }}>
+              <Ionicons
+                name={bannerExpanded ? "chevron-up" : "chevron-down"}
+                size={ns(14)}
+                color={allDone ? GREEN : ORANGE}
+              />
             </View>
           </View>
-        </Pressable>
-
-        <View style={[bS.progressTrack, { backgroundColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)" }]}>
-          <Animated.View style={[bS.progressFill, barStyle, { backgroundColor: allDone ? GREEN : ORANGE }]} />
         </View>
-        <Text style={[bS.progressLabel, { color: textSec }]}>
-          {t("onboarding.banner.progress", { done: completedCount, total: totalCount, defaultValue: `${completedCount} / ${totalCount} complétées` })}
-        </Text>
+      </Pressable>
 
-        <View style={[bS.divider, { backgroundColor: divCol }]} />
+      {/* ── CONTENU EXPANDED (monté/démonté proprement sans animation) ── */}
+      {bannerExpanded && (
+        <View>
+          <View style={{
+            height: 1,
+            marginHorizontal: ns(14),
+            marginBottom: ns(10),
+            backgroundColor: isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.06)",
+          }} />
 
-        <View style={bS.questList}>
-          {firstIncomplete && renderQuest(
-            firstIncomplete, isDark,
-            () => onQuestPress(firstIncomplete.id),
-            state.exploreCount,
-            streakCurrent,
-          )}
-
-          {(remainingCount > 1 || completedCount > 0) && (
-            <Pressable
-              onPress={() => setModalVisible(true)}
-              style={({ pressed }) => [
-                bS.moreLink,
-                {
-                  backgroundColor: isDark ? "rgba(249,115,22,0.05)" : "rgba(249,115,22,0.04)",
-                  borderColor: isDark ? "rgba(249,115,22,0.14)" : "rgba(249,115,22,0.10)",
-                  opacity: pressed ? 0.75 : 1,
-                },
-              ]}
-            >
-              <Text style={[bS.moreLinkText, { color: ORANGE }]}>
-                {remainingCount > 1
-  ? t("onboarding.banner.moreRemaining", {
-      count: remainingCount - 1,
-      done: completedCount,
-      defaultValue: `+${remainingCount - 1} quête${remainingCount - 1 > 1 ? "s" : ""} restante${remainingCount - 1 > 1 ? "s" : ""}${completedCount > 0 ? ` · ${completedCount} ✓` : ""}`,
-    })
-  : t("onboarding.banner.allDoneCount", {
-      count: completedCount,
-      defaultValue: `${completedCount} quête${completedCount > 1 ? "s" : ""} complétée${completedCount > 1 ? "s" : ""} ✓`,
-    })}
-              </Text>
-              <Ionicons name="chevron-forward" size={ns(12)} color={ORANGE + "80"} />
-            </Pressable>
-          )}
+          <View style={{ paddingHorizontal: ns(12), paddingBottom: ns(14), gap: ns(7) }}>
+  {sortedQuests.map((q) =>
+    renderQuest(
+      q,
+      isDark,
+      () => onQuestPress(q.id),
+      state.exploreCount,
+      streakCurrent
+    )
+  )}
+</View>
         </View>
-      </Animated.View>
-    </>
-  );
+      )}
+
+    </View>
+  </>
+);
 }
 
 const bS = StyleSheet.create({

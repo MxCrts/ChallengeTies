@@ -600,7 +600,7 @@
     "todayHub": {
       "primaryMark": "आज मार्क करें",
       "duoNudge": "तुम्हारा पार्टनर कल तुम्हें देखेगा →", 
-      "markHint": "यहाँ tap करो अपना challenge check करने के लिए", 
+      "markHint": "आंशिक भी मायने रखता है। 1 टैप काफी है।",
       "tapToOpen": "challenge देखो →",
       "ctaSub": "अपना दिन सत्यापित करने के लिए 1 टैप",
 "progressLabel": "{{percent}}% पूर्ण",
@@ -691,6 +691,49 @@
     }
   }
 ,
+"journal": {
+      "sectionTitle": "डायरी",
+      "title": "डायरी",
+      "entries": "प्रविष्टियाँ",
+      "seeAll": "सब देखें →",
+      "daysMarked": "दिन",
+      "logsCount": "लॉग",
+      "topMood": "मनोदशा",
+      "recent": "हाल के",
+      "emptyHint": "यहाँ अपना इतिहास देखने के लिए दिन चिह्नित करना शुरू करें।",
+      "markedNoLog": "चिह्नित ✓",
+      "noLog": "कोई लॉग नहीं",
+      "tapToClose": "बंद करने के लिए टैप करें",
+      "challengeProgress": "प्रगति · {{done}}/{{total}}",
+      "empty": {
+        "title": "अभी कोई प्रविष्टि नहीं",
+        "sub": "हर चेक-इन के बाद, आप मनोदशा, मूल्य और नोट जोड़ सकते हैं।"
+      },
+      "legend": {
+        "future": "आगामी",
+        "done": "चिह्नित",
+        "mood": "मनोदशा सहित"
+      }
+    },
+    "perf": {
+      "sheet": {
+        "title": "कैसा रहा?",
+        "sub": "सब वैकल्पिक · आपका इतिहास समृद्ध करता है",
+        "valueLabel": "मूल्य ({{unit}})",
+        "valueLabelGeneric": "प्राप्त मूल्य (वैकल्पिक)",
+        "valuePlaceholder": "लक्ष्य: {{target}}{{unit}}",
+        "valuePlaceholderGeneric": "जैसे: 8000, 2.5, 45…",
+        "noteLabel": "नोट (वैकल्पिक)",
+        "notePlaceholder": "क्या हुआ, कैसा महसूस किया, संदर्भ…",
+        "cta": "सहेजें",
+        "skip": "छोड़ें"
+      },
+      "mood": {
+        "perfect": "बेहतरीन",
+        "good": "अच्छा",
+        "hard": "मुश्किल"
+      }
+    },
   "invitationS": {
     "shareTitle": "जोड़ी आमंत्रण",
     "sentTitle": "निमंत्रण भेजा गया",
@@ -830,6 +873,11 @@
   "addInterestsHere": "मेरी श्रेणियाँ चुनें",
 "matching": {
   "sectionTitle": "जोड़ी और निमंत्रण",
+  "searchPlaceholder": "यूज़रनेम से खोजें…",
+      "searchingUser": "प्रोफ़ाइल खोजी जा रही है…",
+      "searchError": "इस प्रोफ़ाइल को खोजा नहीं जा सका।",
+      "noSearchResultTitle": "कोई प्रोफ़ाइल नहीं मिली",
+      "noSearchResultDesc": "यूज़रनेम जांचें या उस व्यक्ति से duo availability चालू करने को कहें।",
   "duoAvailableLabel": "जोड़ी के लिए उपलब्ध",
   "duoAvailableOn": "तुम मैच में दिखते हो",
   "duoAvailableOff": "तुम मैच में नहीं दिखते",
@@ -876,6 +924,7 @@
 "challengeDetails": {
   "cta_take": "चैलेंज शुरू करें",
   "reviewsSubtitle": "बेहतर चुनाव के लिए असली समीक्षाएं।",
+  "daysLeft": "{{count}} दिन शेष",
       "noReviewsHint": "पहले व्यक्ति बनो जो उपयोगी समीक्षा लिखे। 10 सेकंड, असली असर।",
       "reviewPrivacy": "उपयोगी, स्पष्ट और विनम्र रहो।",
     "cta_markToday": "आज मार्क करें",
@@ -2284,22 +2333,35 @@
 },
 "weeklyReport": {
   "sectionTitle": "साप्ताहिक रिपोर्ट",
-  "btnTitle": "इस सप्ताह की मेरी रिपोर्ट",
+  "btnTitle": "मेरी साप्ताहिक रिपोर्ट",
+  "scoreElite": "🔥 एलीट",
+"scoreGood": "⚡ शानदार",
+"scoreMid": "💪 प्रगति पर",
+"scoreIrregular": "😐 अनियमित",
+"scoreLow": "😴 फिर से शुरू करें",
+"vsPrevWeek": "पिछले हफ्ते से",
+"dayMon": "सो", "dayTue": "मं", "dayWed": "बु",
+"dayThu": "गु", "dayFri": "शु", "daySat": "श", "daySun": "र",
+"streakUnit": "दि",
   "btnSubAvailable": "रिपोर्ट उपलब्ध — मेरी गति देखें",
-  "btnSubEmpty": "सक्रिय सप्ताह के बाद हर सोमवार उपलब्ध",
+  "btnSubEmpty": "हर सोमवार एक सक्रिय सप्ताह के बाद उपलब्ध",
   "newBadge": "देखें",
   "noReportTitle": "अभी कोई रिपोर्ट नहीं",
-  "noReportDesc": "एक सप्ताह की गतिविधि के बाद अगले सोमवार पहली रिपोर्ट उपलब्ध होगी।",
-  "kicker": "साप्ताहिक रिपोर्ट",
+  "noReportDesc": "आपकी पहली रिपोर्ट अगले सोमवार को एक सप्ताह की गतिविधि के बाद उपलब्ध होगी।",
+  "kicker": "साप्ताहिक सारांश",
   "title": "आपकी गति",
   "activeDays": "सक्रिय दिन",
-  "trophies": "ट्रॉफ़ियाँ",
+  "trophies": "ट्रॉफियाँ",
   "momentum": "गति",
+  "streak": "सर्वश्रेष्ठ लय",
   "daysOfWeek": "इस सप्ताह",
-  "diagTitle": "मैं क्या देखता हूँ",
+  "diagTitle": "जो मुझे दिखता है",
   "goalTitle": "इस सप्ताह का लक्ष्य",
+  "goalSub": "आपकी गति के आधार पर स्वचालित रूप से सेट",
   "goalAccept": "मैं चुनौती स्वीकार करता हूँ 💪",
-  "close": "बंद करें"
+  "close": "बंद करें",
+  "challengesSection": "आपकी चुनौतियाँ",
+  "globalProgress": "कुल प्रगति"
 },
 "forge": {
   "title": "द फोर्ज",
@@ -4926,6 +4988,18 @@
   "notificationsPush": {
     "streakTitle": "स्ट्रीक बचाओ",
     "postCompletionTitle": "🔥 अगले के लिए तैयार?",
+    "dailyPersonal1": "✅ \"{{title}}\" आज तुम्हारा इंतज़ार कर रहा है।",
+"dailyPersonal2": "🔥 \"{{title}}\" पर एक और दिन। चलो।",
+"dailyPersonal3": "⚡ \"{{title}}\" — 1 टैप से चेक इन करो।",
+"dailyPersonalMulti1": "✅ \"{{title}}\" और {{count}} और चुनौतियाँ बाकी हैं।",
+"dailyPersonalMulti2": "🔥 आज {{count}} चुनौतियाँ तुम्हारा इंतज़ार कर रही हैं।",
+"latePersonal1": "⏰ \"{{title}}\" — कुछ घंटे बचे हैं।",
+"latePersonal2": "🚨 आज रात \"{{title}}\" मत छोड़ो।",
+"latePersonal3": "🔥 \"{{title}}\" तुम्हारे चेक-इन का इंतज़ार कर रहा है। आखिरी मौका।",
+"latePersonalMulti1": "⏰ \"{{title}}\" और {{count}} और चेक-इन नहीं हुए।",
+"latePersonalMulti2": "🚨 {{count}} चुनौतियाँ अधूरी हैं। आज रात आखिरी मौका।",
+"streakDangerPersonal1": "🚨 \"{{title}}\" — स्ट्रीक खतरे में। आधी रात से पहले चेक इन करो।",
+"streakDangerPersonal2": "⚠️ \"{{title}}\" की स्ट्रीक दाँव पर है। कुछ घंटे बचे हैं।",
     "postCompletionBody": "तुमने एक चैलेंज पूरा किया। अगला क्या है?",
 "streakBody": "आज एक चैलेंज बाकी है। अभी पूरा करो।",
 "streakDangerTitle": "🚨 स्ट्रीक खतरे में!",

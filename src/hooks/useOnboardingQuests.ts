@@ -23,7 +23,6 @@ export function useOnboardingQuests() {
   const [state, setState] = useState<OnboardingState | null>(null);
   const [loading, setLoading] = useState(true);
   const mountedRef = useRef(true);
-  // Garde contre double-trigger
   const completingRef = useRef<Set<QuestId>>(new Set());
 
   // ─── Load ────────────────────────────────────────────────────────────────
@@ -32,8 +31,9 @@ export function useOnboardingQuests() {
     try {
       const s = await loadOnboardingState();
       if (mountedRef.current) setState(s);
-    } catch {}
-    finally {
+    } catch (e) {
+      console.warn("[useOnboardingQuests] load error:", e);
+    } finally {
       if (mountedRef.current) setLoading(false);
     }
   }, []);
@@ -47,6 +47,8 @@ export function useOnboardingQuests() {
       const next = await completeQuest(questId);
       if (mountedRef.current) setState(next);
       return next;
+    } catch (e) {
+      console.warn("[useOnboardingQuests] complete error:", questId, e);
     } finally {
       completingRef.current.delete(questId);
     }
@@ -145,22 +147,26 @@ export function useOnboardingQuests() {
   useEffect(() => {
     const sub = DeviceEventEmitter.addListener(QUEST_CHALLENGE_EXPLORED, async () => {
       await incrementExploreCount();
-      load(); // refresh pour avoir le nouveau count
+      load();
     });
     return () => sub.remove();
   }, [load]);
 
   // ─── Dérivés ──────────────────────────────────────────────────────────────
 
+  const completedCount = state?.quests.filter((q) => q.completed).length ?? 0;
+  const totalCount = state?.quests.length ?? 6;
+  const progressPct = totalCount > 0 ? completedCount / totalCount : 0;
+
+  // ✅ FIX : allCompleted recalculé localement pour éviter le cas où
+  // state.allCompleted est true mais les quêtes ne le reflètent pas encore
+  const allCompleted = completedCount === totalCount && totalCount > 0;
+
   const visible =
     !loading &&
     !!state &&
     !state.dismissed &&
-    !state.allCompleted;
-
-  const completedCount = state?.quests.filter((q) => q.completed).length ?? 0;
-  const totalCount = state?.quests.length ?? 6;
-  const progressPct = totalCount > 0 ? completedCount / totalCount : 0;
+    !allCompleted; // ← utilise le calcul local, pas state.allCompleted
 
   return {
     loading,
@@ -172,7 +178,6 @@ export function useOnboardingQuests() {
     complete,
     dismiss,
     reload: load,
-    // Helpers pour triggers externes
     checkProfileQuest,
     checkStreakQuest,
   };

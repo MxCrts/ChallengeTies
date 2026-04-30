@@ -561,6 +561,7 @@
 "challengeDetails": {
   "cta_take": "チャレンジ開始",
   "reviewsSubtitle": "より良い選択のためのリアルな口コミ。",
+  "daysLeft": "残り{{count}}日",
       "noReviewsHint": "最初の有益なレビューを書こう。10秒で、ちゃんと効く。",
       "reviewPrivacy": "役に立つ内容で、分かりやすく、丁寧に。",
     "cta_markToday": "今日を記録",
@@ -1448,6 +1449,49 @@
       }
     }
   },
+  "journal": {
+      "sectionTitle": "ジャーナル",
+      "title": "ジャーナル",
+      "entries": "件",
+      "seeAll": "すべて見る →",
+      "daysMarked": "日",
+      "logsCount": "ログ",
+      "topMood": "気分",
+      "recent": "最近",
+      "emptyHint": "日を記録してここで履歴を確認しましょう。",
+      "markedNoLog": "記録済み ✓",
+      "noLog": "ログなし",
+      "tapToClose": "タップして閉じる",
+      "challengeProgress": "進捗 · {{done}}/{{total}}",
+      "empty": {
+        "title": "まだ記録がありません",
+        "sub": "チェックインごとに気分、数値、自由メモを記録できます。"
+      },
+      "legend": {
+        "future": "今後",
+        "done": "記録済み",
+        "mood": "気分あり"
+      }
+    },
+    "perf": {
+      "sheet": {
+        "title": "どうでしたか？",
+        "sub": "すべて任意 · 履歴を充実させます",
+        "valueLabel": "数値（{{unit}}）",
+        "valueLabelGeneric": "達成した数値（任意）",
+        "valuePlaceholder": "目標：{{target}}{{unit}}",
+        "valuePlaceholderGeneric": "例：8000、2.5、45…",
+        "noteLabel": "メモ（任意）",
+        "notePlaceholder": "何があったか、感想、状況…",
+        "cta": "保存",
+        "skip": "スキップ"
+      },
+      "mood": {
+        "perfect": "完璧",
+        "good": "良い",
+        "hard": "きつい"
+      }
+    },
   "onboarding": {
   "banner": {
     "title": "始めよう 🔥",
@@ -1507,6 +1551,11 @@
 "matching": {
   "sectionTitle": "デュオと招待",
   "duoAvailableLabel": "デュオに参加可能",
+   "searchPlaceholder": "ユーザー名で検索…",
+      "searchingUser": "プロフィールを検索中…",
+      "searchError": "このプロフィールを検索できませんでした。",
+      "noSearchResultTitle": "プロフィールが見つかりません",
+      "noSearchResultDesc": "ユーザー名を確認するか、相手にデュオ参加を有効にしてもらってください。",
   "duoAvailableOn": "マッチングに表示される",
   "duoAvailableOff": "マッチングに表示されない",
   "inboxBtnLabel": "デュオの招待",
@@ -2569,6 +2618,18 @@
 },
   "notificationsPush": {
     "daily1": "今日の1チャレンジが、1日を変える。やる？",
+    "dailyPersonal1": "✅「{{title}}」が今日あなたを待っています。",
+"dailyPersonal2": "🔥「{{title}}」でまた1日。さあ行こう。",
+"dailyPersonal3": "⚡「{{title}}」— タップ1つでチェックイン。",
+"dailyPersonalMulti1": "✅「{{title}}」と他{{count}}件が未完了。",
+"dailyPersonalMulti2": "🔥 今日{{count}}つのチャレンジが待っています。",
+"latePersonal1": "⏰「{{title}}」— あと数時間。",
+"latePersonal2": "🚨 今夜「{{title}}」を諦めないで。",
+"latePersonal3": "🔥「{{title}}」のチェックイン待ち。ラストチャンス。",
+"latePersonalMulti1": "⏰「{{title}}」と他{{count}}件が未チェックイン。",
+"latePersonalMulti2": "🚨 {{count}}件のチャレンジが未完了。今夜が最後のチャンス。",
+"streakDangerPersonal1": "🚨「{{title}}」— ストリーク危機。深夜前にチェックイン。",
+"streakDangerPersonal2": "⚠️「{{title}}」のストリークが危ない。あと数時間。",
     "postCompletionTitle": "🔥 次は何に挑戦する?",
     "postCompletionBody": "チャレンジを完了した。次の一手は？",
     "streakDangerTitle": "🚨 ストリーク危機！",
@@ -2720,7 +2781,7 @@
     "todayHub": {
       "primaryMark": "今日チェックイン",
       "duoNudge": "パートナーは明日あなたを見る →", 
-      "markHint": "ここをタップしてチャレンジを記録", 
+      "markHint": "部分的でもカウントされます。タップ1回で十分。",
       "tapToOpen": "チャレンジを見る →",
       "ctaSub": "1タップで今日を記録",
 "progressLabel": "{{percent}}% 達成",
@@ -5059,22 +5120,35 @@
 },
 "weeklyReport": {
   "sectionTitle": "週次レポート",
+  "scoreElite": "🔥 エリート",
+"scoreGood": "⚡ 好調",
+"scoreMid": "💪 前進中",
+"scoreIrregular": "😐 不安定",
+"scoreLow": "😴 再スタートを",
+"vsPrevWeek": "先週比",
+"dayMon": "月", "dayTue": "火", "dayWed": "水",
+"dayThu": "木", "dayFri": "金", "daySat": "土", "daySun": "日",
+"streakUnit": "日",
   "btnTitle": "今週のレポート",
-  "btnSubAvailable": "レポートあり — モメンタムを確認",
-  "btnSubEmpty": "アクティブな週の翌月曜日に利用可能",
+  "btnSubAvailable": "レポートが利用可能 — モメンタムを確認",
+  "btnSubEmpty": "アクティブな1週間の後、毎週月曜日に利用可能",
   "newBadge": "見る",
-  "noReportTitle": "レポートはまだありません",
-  "noReportDesc": "1週間のアクティビティの後、来週の月曜日に最初のレポートが表示されます。",
-  "kicker": "週次レポート",
+  "noReportTitle": "まだレポートなし",
+  "noReportDesc": "最初のレポートは、1週間の活動後の来週月曜日に利用可能になります。",
+  "kicker": "週次サマリー",
   "title": "あなたのモメンタム",
-  "activeDays": "アクティブな日",
+  "activeDays": "アクティブ日数",
   "trophies": "トロフィー",
   "momentum": "モメンタム",
+  "streak": "ベストストリーク",
   "daysOfWeek": "今週",
-  "diagTitle": "私が見ること",
+  "diagTitle": "分析結果",
   "goalTitle": "今週の目標",
+  "goalSub": "あなたのペースに基づいて自動設定",
   "goalAccept": "チャレンジを受け入れる 💪",
-  "close": "閉じる"
+  "close": "閉じる",
+  "challengesSection": "あなたのチャレンジ",
+  "globalProgress": "全体の進捗"
 },
 "forge": {
   "title": "鍛冶場",

@@ -559,6 +559,7 @@
 "challengeDetails": {
   "cta_take": "Começar desafio",
   "reviewsSubtitle": "Avaliações reais para escolher melhor.",
+  "daysLeft": "{{count}} dia{{count, plural, one {} other {s}}} restante{{count, plural, one {} other {s}}}",
       "noReviewsHint": "Sê o primeiro a deixar uma avaliação útil. 10 segundos, impacto real.",
       "reviewPrivacy": "Mantém-te útil, claro e respeitoso.",
     "cta_markToday": "Marcar hoje",
@@ -1505,6 +1506,11 @@
 "matching": {
   "sectionTitle": "Duo & convites",
   "duoAvailableLabel": "Disponível para um duo",
+  "searchPlaceholder": "Pesquisar por username…",
+      "searchingUser": "A procurar perfil…",
+      "searchError": "Não foi possível procurar este perfil.",
+      "noSearchResultTitle": "Nenhum perfil encontrado",
+      "noSearchResultDesc": "Verifica o username ou pede à pessoa para ativar a disponibilidade para duo.",
   "duoAvailableOn": "Apareces nos matchs",
   "duoAvailableOff": "Não apareces nos matchs",
   "inboxBtnLabel": "Convites de duo",
@@ -2530,6 +2536,18 @@
 },
   "notificationsPush": {
      "daily1": "Um desafio hoje pode mudar o seu dia. Bora?",
+     "dailyPersonal1": "✅ \"{{title}}\" está te esperando hoje.",
+"dailyPersonal2": "🔥 Mais um dia em \"{{title}}\". Vamos.",
+"dailyPersonal3": "⚡ \"{{title}}\" — 1 clique para validar.",
+"dailyPersonalMulti1": "✅ \"{{title}}\" e {{count}} outro(s) para validar.",
+"dailyPersonalMulti2": "🔥 {{count}} desafios te esperam hoje.",
+"latePersonal1": "⏰ \"{{title}}\" — poucas horas restantes.",
+"latePersonal2": "🚨 Não abandones \"{{title}}\" esta noite.",
+"latePersonal3": "🔥 \"{{title}}\" aguarda o teu check-in. Última chance.",
+"latePersonalMulti1": "⏰ \"{{title}}\" e {{count}} outro(s) por validar.",
+"latePersonalMulti2": "🚨 {{count}} desafios por validar. Esta noite é a tua janela.",
+"streakDangerPersonal1": "🚨 \"{{title}}\" — série em risco. Valida antes da meia-noite.",
+"streakDangerPersonal2": "⚠️ Série \"{{title}}\" em jogo. Poucas horas restantes.",
      "postCompletionTitle": "🔥 Pronto para o próximo?",
     "postCompletionBody": "Terminaste um desafio. Qual é o teu próximo passo?",
      "streakDangerTitle": "🚨 Sequência em risco!",
@@ -2672,7 +2690,7 @@
     "todayHub": {
       "primaryMark": "Marcar hoje",
       "duoNudge": "O teu parceiro ver-te-á amanhã →", 
-      "markHint": "Toca aqui para marcar o teu desafio", 
+      "markHint": "Mesmo parcial, conta. 1 toque é suficiente.",
       "tapToOpen": "Ver desafio →",
       "ctaSub": "1 toque para validar o teu dia",
 "progressLabel": "{{percent}}% concluído",
@@ -2946,6 +2964,49 @@
     }
   ]
 },
+"journal": {
+      "sectionTitle": "Diário",
+      "title": "Diário",
+      "entries": "entradas",
+      "seeAll": "Ver tudo →",
+      "daysMarked": "dias",
+      "logsCount": "registos",
+      "topMood": "humor",
+      "recent": "Recentes",
+      "emptyHint": "Começa a marcar dias para ver o teu histórico aqui.",
+      "markedNoLog": "Marcado ✓",
+      "noLog": "Sem registo",
+      "tapToClose": "Toca para fechar",
+      "challengeProgress": "Progresso · {{done}}/{{total}}",
+      "empty": {
+        "title": "Ainda sem entradas",
+        "sub": "Após cada check-in, poderás registar o teu humor, um valor e uma nota livre."
+      },
+      "legend": {
+        "future": "Em breve",
+        "done": "Marcado",
+        "mood": "Com humor"
+      }
+    },
+    "perf": {
+      "sheet": {
+        "title": "Como correu?",
+        "sub": "Tudo opcional · Enriquece o teu histórico",
+        "valueLabel": "Valor ({{unit}})",
+        "valueLabelGeneric": "Valor atingido (opcional)",
+        "valuePlaceholder": "Meta: {{target}}{{unit}}",
+        "valuePlaceholderGeneric": "Ex: 8000, 2.5, 45…",
+        "noteLabel": "Nota (opcional)",
+        "notePlaceholder": "O que aconteceu, como te sentiste, contexto…",
+        "cta": "Guardar",
+        "skip": "Saltar"
+      },
+      "mood": {
+        "perfect": "Perfeito",
+        "good": "Bem",
+        "hard": "Difícil"
+      }
+    },
 "premiumTitle": "Premium",
   "premiumNoUserOnPurchase": "Nenhum usuário estava conectado no momento da compra. Tente novamente depois de iniciar sessão.",
   "purchaseSuccess": "Obrigado pelo seu apoio ❤️ Todos os anúncios foram desativados.",
@@ -5032,6 +5093,15 @@
 },
 "weeklyReport": {
   "sectionTitle": "Relatório semanal",
+  "scoreElite": "🔥 Elite",
+"scoreGood": "⚡ Em forma",
+"scoreMid": "💪 No caminho",
+"scoreIrregular": "😐 Irregular",
+"scoreLow": "😴 Hora de recomeçar",
+"vsPrevWeek": "vs semana passada",
+"dayMon": "S", "dayTue": "T", "dayWed": "Q",
+"dayThu": "Q", "dayFri": "S", "daySat": "S", "daySun": "D",
+"streakUnit": "d",
   "btnTitle": "Meu relatório da semana",
   "btnSubAvailable": "Relatório disponível — ver meu momentum",
   "btnSubEmpty": "Disponível toda segunda-feira após uma semana ativa",
@@ -5043,11 +5113,15 @@
   "activeDays": "dias ativos",
   "trophies": "troféus",
   "momentum": "momentum",
+  "streak": "melhor sequência",
   "daysOfWeek": "Esta semana",
   "diagTitle": "O que vejo",
-  "goalTitle": "Objetivo desta semana",
+  "goalTitle": "Meta desta semana",
+  "goalSub": "Definido automaticamente com base no seu ritmo",
   "goalAccept": "Aceito o desafio 💪",
-  "close": "Fechar"
+  "close": "Fechar",
+  "challengesSection": "Seus desafios",
+  "globalProgress": "Progresso global"
 },
 "forge": {
   "title": "A Forja",

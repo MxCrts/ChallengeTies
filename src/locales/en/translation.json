@@ -652,7 +652,7 @@
     "todayHub": {
       "primaryMark": "Check in today",
       "duoNudge": "Your partner will see you tomorrow →",
-        "markHint": "Tap here to check in your challenge",
+        "markHint":  "Even partial, it counts. 1 tap is enough.",
         "tapToOpen": "See challenge →",
       "ctaSub": "1 tap to validate your day",
 "progressLabel": "{{percent}}% completed",
@@ -897,8 +897,13 @@
   "sameChallengeLabel": "Does this challenge solo",
   "sameCategoryLabel": "Category: {{category}}",
   "availableLabel": "Available for a duo",
-  "days": "days"
-},
+  "days": "days",
+"searchPlaceholder": "Search by username…",
+      "searchingUser": "Searching profile…",
+      "searchError": "Unable to search this profile.",
+      "noSearchResultTitle": "No profile found",
+      "noSearchResultDesc": "Check the username or ask this person to enable duo availability."
+    },
 "feed": {
   "shareOnFeed": "Share my exploits",
   "shareOnFeedSub": "Visible to the entire community",
@@ -917,6 +922,7 @@
 ,
  "challengeDetails": {
   "cta_take": "Start challenge",
+  "daysLeft": "{{count}} day{{count, plural, one {} other {s}}} left",
   "reviewsSubtitle": "Real reviews to choose better.",
       "noReviewsHint": "Be the first to leave a helpful review. 10 seconds, real impact.",
       "reviewPrivacy": "Keep it helpful, clear, and kind.",
@@ -1155,6 +1161,49 @@
     "inviteNow": "Invite a friend",
     "button": "Got it"
   },
+  "journal": {
+      "sectionTitle": "Journal",
+      "title": "Journal",
+      "entries": "entries",
+      "seeAll": "See all →",
+      "daysMarked": "days",
+      "logsCount": "logs",
+      "topMood": "mood",
+      "recent": "Recent",
+      "emptyHint": "Start marking days to see your history here.",
+      "markedNoLog": "Marked ✓",
+      "noLog": "No log",
+      "tapToClose": "Tap to close",
+      "challengeProgress": "Progress · {{done}}/{{total}}",
+      "empty": {
+        "title": "No entries yet",
+        "sub": "After each check-in, you can log your mood, a value, and a free note."
+      },
+      "legend": {
+        "future": "Upcoming",
+        "done": "Marked",
+        "mood": "With mood"
+      }
+    },
+    "perf": {
+      "sheet": {
+        "title": "How did it go?",
+        "sub": "All optional · Enriches your history",
+        "valueLabel": "Value ({{unit}})",
+        "valueLabelGeneric": "Value reached (optional)",
+        "valuePlaceholder": "Goal: {{target}}{{unit}}",
+        "valuePlaceholderGeneric": "E.g. 8000, 2.5, 45…",
+        "noteLabel": "Note (optional)",
+        "notePlaceholder": "What happened, how you felt, context…",
+        "cta": "Save",
+        "skip": "Skip"
+      },
+      "mood": {
+        "perfect": "Perfect",
+        "good": "Good",
+        "hard": "Hard"
+      }
+    },
   "charsRemaining_one": "{{count}} character remaining",
 "charsRemaining_other": "{{count}} characters remaining",
 "completionLabel": "Completion",
@@ -4577,6 +4626,18 @@
 },
   "notificationsPush": {
     "daily1": "One challenge today can change your whole day. Ready?",
+    "dailyPersonal1": "✅ \"{{title}}\" is waiting for you today.",
+"dailyPersonal2": "🔥 One more day on \"{{title}}\". Let's go.",
+"dailyPersonal3": "⚡ \"{{title}}\" — 1 tap to check in.",
+"dailyPersonalMulti1": "✅ \"{{title}}\" and {{count}} other(s) to validate.",
+"dailyPersonalMulti2": "🔥 {{count}} challenges waiting for you today.",
+"latePersonal1": "⏰ \"{{title}}\" — a few hours left.",
+"latePersonal2": "🚨 Don't drop \"{{title}}\" tonight.",
+"latePersonal3": "🔥 \"{{title}}\" needs your check-in. Last chance.",
+"latePersonalMulti1": "⏰ \"{{title}}\" and {{count}} other(s) not checked in.",
+"latePersonalMulti2": "🚨 {{count}} challenges not validated. Tonight's your window.",
+"streakDangerPersonal1": "🚨 \"{{title}}\" — streak at risk. Check in before midnight.",
+"streakDangerPersonal2": "⚠️ \"{{title}}\" streak on the line. A few hours left.",
     "postCompletionTitle": "🔥 Ready for what's next?",
    "postCompletionBody":  "You just finished a challenge. What's your next move?",
     "streakDangerTitle": "🚨 Streak at risk!",
@@ -5136,6 +5197,15 @@
 "weeklyReport": {
   "sectionTitle": "Weekly report",
   "btnTitle": "My weekly report",
+  "scoreElite": "🔥 Elite",
+"scoreGood": "⚡ On fire",
+"scoreMid": "💪 Getting there",
+"scoreIrregular": "😐 Inconsistent",
+"scoreLow": "😴 Time to restart",
+"vsPrevWeek": "vs last week",
+"dayMon": "M", "dayTue": "T", "dayWed": "W",
+"dayThu": "T", "dayFri": "F", "daySat": "S", "daySun": "S",
+"streakUnit": "d",
   "btnSubAvailable": "Report available — see my momentum",
   "btnSubEmpty": "Available every Monday after an active week",
   "newBadge": "VIEW",
@@ -5146,11 +5216,15 @@
   "activeDays": "active days",
   "trophies": "trophies",
   "momentum": "momentum",
+  "streak": "best streak",
   "daysOfWeek": "This week",
   "diagTitle": "What I see",
-  "goalTitle": "Goal for this week",
-  "goalAccept": "I'm up for the challenge 💪",
-  "close": "Close"
+  "goalTitle": "This week's goal",
+  "goalSub": "Set automatically based on your pace",
+  "goalAccept": "I'm taking the challenge 💪",
+  "close": "Close",
+  "challengesSection": "Your challenges",
+  "globalProgress": "Overall progress"
 },
   "forge": {
   "title": "The Forge",

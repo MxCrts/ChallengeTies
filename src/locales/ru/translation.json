@@ -563,7 +563,7 @@
     "todayHub": {
       "primaryMark": "Отметить сегодня",
       "duoNudge": "Партнёр увидит тебя завтра →", 
-      "markHint": "Нажми здесь, чтобы отметить свой вызов", 
+      "markHint":  "Даже частично — это считается. Достаточно 1 нажатия.",
       "tapToOpen": "Открыть вызов →",
       "ctaSub": "1 нажатие, чтобы подтвердить день",
 "progressLabel": "{{percent}}% выполнено",
@@ -795,6 +795,11 @@
   "addInterestsHere": "Выбрать категории",
 "matching": {
   "sectionTitle": "Дуэт и приглашения",
+   "searchPlaceholder": "Поиск по username…",
+      "searchingUser": "Поиск профиля…",
+      "searchError": "Не удалось найти этот профиль.",
+      "noSearchResultTitle": "Профиль не найден",
+      "noSearchResultDesc": "Проверь username или попроси человека включить доступность для дуо.",
   "duoAvailableLabel": "Доступен для дуэта",
   "duoAvailableOn": "Ты появляешься в матчах",
   "duoAvailableOff": "Ты не появляешься в матчах",
@@ -824,6 +829,49 @@
   "sameCategoryLabel": "Категория: {{category}}",
   "availableLabel": "Доступен для дуэта"
 },
+"journal": {
+      "sectionTitle": "Дневник",
+      "title": "Дневник",
+      "entries": "записей",
+      "seeAll": "Все →",
+      "daysMarked": "дней",
+      "logsCount": "записей",
+      "topMood": "настрой",
+      "recent": "Недавние",
+      "emptyHint": "Начни отмечать дни, чтобы видеть историю здесь.",
+      "markedNoLog": "Отмечено ✓",
+      "noLog": "Нет записи",
+      "tapToClose": "Нажми, чтобы закрыть",
+      "challengeProgress": "Прогресс · {{done}}/{{total}}",
+      "empty": {
+        "title": "Записей пока нет",
+        "sub": "После каждой отметки можно добавить настроение, значение и заметку."
+      },
+      "legend": {
+        "future": "Предстоит",
+        "done": "Отмечено",
+        "mood": "С настроем"
+      }
+    },
+    "perf": {
+      "sheet": {
+        "title": "Как прошло?",
+        "sub": "Всё необязательно · Дополняет историю",
+        "valueLabel": "Значение ({{unit}})",
+        "valueLabelGeneric": "Достигнутое значение (необязательно)",
+        "valuePlaceholder": "Цель: {{target}}{{unit}}",
+        "valuePlaceholderGeneric": "Напр.: 8000, 2.5, 45…",
+        "noteLabel": "Заметка (необязательно)",
+        "notePlaceholder": "Что произошло, как ты себя чувствовал, контекст…",
+        "cta": "Сохранить",
+        "skip": "Пропустить"
+      },
+      "mood": {
+        "perfect": "Отлично",
+        "good": "Хорошо",
+        "hard": "Тяжело"
+      }
+    },
 "feed": {
   "shareOnFeed": "Делиться моими подвигами",
   "shareOnFeedSub": "Видно всему сообществу",
@@ -841,6 +889,7 @@
   "challengeDetails": {
     "cta_take": "Начать челлендж",
     "cta_markToday": "Отметить сегодня",
+    "daysLeft": "{{count}} дн. осталось",
     "reviewsSubtitle": "Реальные отзывы для лучшего выбора.",
       "noReviewsHint": "Оставь первый полезный отзыв. 10 секунд — реальный эффект.",
       "reviewPrivacy": "Пиши по делу, ясно и доброжелательно.",
@@ -2233,23 +2282,36 @@
   "noMark": "Нет заданий в этот день"
 },
 "weeklyReport": {
-  "sectionTitle": "Еженедельный отчёт",
-  "btnTitle": "Мой отчёт за неделю",
-  "btnSubAvailable": "Отчёт доступен — посмотреть мой прогресс",
-  "btnSubEmpty": "Доступно каждый понедельник после активной недели",
+  "sectionTitle": "Недельный отчёт",
+  "scoreElite": "🔥 Элита",
+"scoreGood": "⚡ В форме",
+"scoreMid": "💪 На пути",
+"scoreIrregular": "😐 Нерегулярно",
+"scoreLow": "😴 Пора перезапуститься",
+"vsPrevWeek": "vs прош. неделя",
+"dayMon": "П", "dayTue": "В", "dayWed": "С",
+"dayThu": "Ч", "dayFri": "П", "daySat": "С", "daySun": "В",
+"streakUnit": "д",
+  "btnTitle": "Мой недельный отчёт",
+  "btnSubAvailable": "Отчёт готов — посмотреть мой моментум",
+  "btnSubEmpty": "Каждый понедельник после активной недели",
   "newBadge": "СМОТРЕТЬ",
-  "noReportTitle": "Отчёт ещё не готов",
-  "noReportDesc": "Первый отчёт будет доступен в следующий понедельник после недели активности.",
-  "kicker": "Отчёт недели",
-  "title": "Твой прогресс",
+  "noReportTitle": "Отчёта пока нет",
+  "noReportDesc": "Первый отчёт появится в следующий понедельник после недели активности.",
+  "kicker": "Итоги недели",
+  "title": "Твой моментум",
   "activeDays": "активных дней",
   "trophies": "трофеи",
-  "momentum": "прогресс",
+  "momentum": "моментум",
+  "streak": "лучшая серия",
   "daysOfWeek": "На этой неделе",
   "diagTitle": "Что я вижу",
   "goalTitle": "Цель на эту неделю",
+  "goalSub": "Устанавливается автоматически по твоему темпу",
   "goalAccept": "Принимаю вызов 💪",
-  "close": "Закрыть"
+  "close": "Закрыть",
+  "challengesSection": "Твои челленджи",
+  "globalProgress": "Общий прогресс"
 },
 "forge": {
   "title": "Кузница",
@@ -4915,6 +4977,18 @@
 },
   "notificationsPush": {
     "daily1": "Один челлендж сегодня может изменить твой день. Готов?",
+    "dailyPersonal1": "✅ «{{title}}» ждёт тебя сегодня.",
+"dailyPersonal2": "🔥 Ещё один день в «{{title}}». Давай.",
+"dailyPersonal3": "⚡ «{{title}}» — 1 нажатие для отметки.",
+"dailyPersonalMulti1": "✅ «{{title}}» и ещё {{count}} задание(й) не выполнено.",
+"dailyPersonalMulti2": "🔥 {{count}} задания ждут тебя сегодня.",
+"latePersonal1": "⏰ «{{title}}» — осталось несколько часов.",
+"latePersonal2": "🚨 Не бросай «{{title}}» сегодня вечером.",
+"latePersonal3": "🔥 «{{title}}» ждёт твою отметку. Последний шанс.",
+"latePersonalMulti1": "⏰ «{{title}}» и ещё {{count}} не отмечено.",
+"latePersonalMulti2": "🚨 {{count}} заданий не выполнено. Последний шанс сегодня.",
+"streakDangerPersonal1": "🚨 «{{title}}» — серия под угрозой. Отметься до полуночи.",
+"streakDangerPersonal2": "⚠️ Серия «{{title}}» на кону. Осталось несколько часов.",
     "postCompletionTitle": "🔥 Готов к следующему?",
     "postCompletionBody": "Ты завершил челлендж. Какой следующий шаг?",
     "streakTitle": "Сохрани серию",

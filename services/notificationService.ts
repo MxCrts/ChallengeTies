@@ -396,11 +396,45 @@ const _scheduleDailyCore = async (): Promise<boolean> => {
   const oldId = await AsyncStorage.getItem(STORAGE_KEYS.dailyId);
   if (oldId) await Notifications.cancelScheduledNotificationAsync(oldId).catch(() => {});
 
-  const messages = [
-    tSafe("notificationsPush.daily1", { lng: language }),
-    tSafe("notificationsPush.daily2", { lng: language }),
-    tSafe("notificationsPush.daily3", { lng: language }),
+  // APRÈS
+const buildPersonalizedMessages = (
+  unmarked: any[],
+  lng: string
+): string[] => {
+  const firstTitle = typeof unmarked[0]?.title === "string"
+    ? unmarked[0].title.trim()
+    : "";
+  const count = unmarked.length;
+
+  if (firstTitle && count === 1) {
+    return [
+      tSafe("notificationsPush.dailyPersonal1", { lng, title: firstTitle,
+        defaultValue: `✅ "${firstTitle}" t'attend aujourd'hui.` }),
+      tSafe("notificationsPush.dailyPersonal2", { lng, title: firstTitle,
+        defaultValue: `🔥 Un jour de plus sur "${firstTitle}". Go.` }),
+      tSafe("notificationsPush.dailyPersonal3", { lng, title: firstTitle,
+        defaultValue: `⚡ "${firstTitle}" — 1 clic pour valider.` }),
+    ];
+  }
+
+  if (firstTitle && count > 1) {
+    return [
+      tSafe("notificationsPush.dailyPersonalMulti1", { lng, title: firstTitle, count,
+        defaultValue: `✅ "${firstTitle}" et ${count - 1} autre(s) à valider.` }),
+      tSafe("notificationsPush.dailyPersonalMulti2", { lng, count,
+        defaultValue: `🔥 ${count} défis t'attendent aujourd'hui.` }),
+    ];
+  }
+
+  // Fallback générique
+  return [
+    tSafe("notificationsPush.daily1", { lng }),
+    tSafe("notificationsPush.daily2", { lng }),
+    tSafe("notificationsPush.daily3", { lng }),
   ].filter(s => s.trim().length > 0);
+};
+
+const messages = buildPersonalizedMessages(gate.unmarkedChallenges, language);
 
   const triggerDate = buildTomorrowTriggerInWindow();
   const notifId = await Notifications.scheduleNotificationAsync({
@@ -481,11 +515,43 @@ const _scheduleLateCore = async (): Promise<boolean> => {
   const oldId = await AsyncStorage.getItem(STORAGE_KEYS.lateId);
   if (oldId) await Notifications.cancelScheduledNotificationAsync(oldId).catch(() => {});
 
-  const messages = [
-    tSafe("notificationsPush.late1", { lng: language }),
-    tSafe("notificationsPush.late2", { lng: language }),
-    tSafe("notificationsPush.late3", { lng: language }),
+  const buildPersonalizedLateMessages = (
+  unmarked: any[],
+  lng: string
+): string[] => {
+  const firstTitle = typeof unmarked[0]?.title === "string"
+    ? unmarked[0].title.trim()
+    : "";
+  const count = unmarked.length;
+
+  if (firstTitle && count === 1) {
+    return [
+      tSafe("notificationsPush.latePersonal1", { lng, title: firstTitle,
+        defaultValue: `⏰ "${firstTitle}" — encore quelques heures.` }),
+      tSafe("notificationsPush.latePersonal2", { lng, title: firstTitle,
+        defaultValue: `🚨 Ne laisse pas tomber "${firstTitle}" ce soir.` }),
+      tSafe("notificationsPush.latePersonal3", { lng, title: firstTitle,
+        defaultValue: `🔥 "${firstTitle}" attend ton check-in. Dernier moment.` }),
+    ];
+  }
+
+  if (firstTitle && count > 1) {
+    return [
+      tSafe("notificationsPush.latePersonalMulti1", { lng, title: firstTitle, count,
+        defaultValue: `⏰ "${firstTitle}" et ${count - 1} autre(s) non validés.` }),
+      tSafe("notificationsPush.latePersonalMulti2", { lng, count,
+        defaultValue: `🚨 ${count} défis non validés. Il te reste ce soir.` }),
+    ];
+  }
+
+  return [
+    tSafe("notificationsPush.late1", { lng }),
+    tSafe("notificationsPush.late2", { lng }),
+    tSafe("notificationsPush.late3", { lng }),
   ].filter(s => s.trim().length > 0);
+};
+
+const messages = buildPersonalizedLateMessages(gate.unmarkedChallenges, language);
 
   const triggerDate = buildTodayTriggerInLateWindow();
   const notifId = await Notifications.scheduleNotificationAsync({
@@ -559,11 +625,22 @@ export const scheduleStreakDangerIfNeeded = async (): Promise<void> => {
       if (oldId) await Notifications.cancelScheduledNotificationAsync(oldId).catch(() => {});
       await cancelByTag(TAGS.STREAK_DANGER);
 
-      const messages = [
-        tSafe("notificationsPush.streakDanger1", { lng: language }),
-        tSafe("notificationsPush.streakDanger2", { lng: language }),
-        tSafe("notificationsPush.streakDanger3", { lng: language }),
-      ].filter(s => s.trim().length > 0);
+      const firstTitle = typeof gate.unmarkedChallenges[0]?.title === "string"
+  ? gate.unmarkedChallenges[0].title.trim()
+  : "";
+
+const messages = firstTitle
+  ? [
+      tSafe("notificationsPush.streakDangerPersonal1", { lng: language, title: firstTitle,
+        defaultValue: `🚨 "${firstTitle}" — ta série en danger. Valide avant minuit.` }),
+      tSafe("notificationsPush.streakDangerPersonal2", { lng: language, title: firstTitle,
+        defaultValue: `⚠️ Série "${firstTitle}" en jeu. Il te reste quelques heures.` }),
+    ]
+  : [
+      tSafe("notificationsPush.streakDanger1", { lng: language }),
+      tSafe("notificationsPush.streakDanger2", { lng: language }),
+      tSafe("notificationsPush.streakDanger3", { lng: language }),
+    ].filter(s => s.trim().length > 0);
 
       const fallbackBodies = [
         "⚠️ Ta série est en danger ! Marque ton défi avant minuit.",

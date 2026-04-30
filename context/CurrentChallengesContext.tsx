@@ -1128,9 +1128,6 @@ try {
 
       scheduleAchievementsCheck(userId);
 
-      // ✅ Onboarding quêtes — non bloquant
-      completeOnboardingQuest("join_solo_challenge").catch(() => {});
-      completeOnboardingQuest("view_challenge").catch(() => {});
     } catch (error: any) {
       console.error("Erreur lors de l'ajout du défi :", error.message);
       notify(
@@ -1520,6 +1517,17 @@ defer(async () => {
 
   // ✅ Onboarding quête — premier jour marqué
     completeOnboardingQuest("mark_first_day").catch(() => {});
+
+    // ✅ Émet l'event pour la PerformanceLogSheet
+    try {
+      DeviceEventEmitter.emit("challengeties.perf.log", {
+        challengeId: capturedChallengeId,
+        uniqueKey: capturedUniqueKey,
+        dateKey: todayKey,
+        at: Date.now(),
+      });
+    } catch {}
+
     // ✅ Trigger premier marquage (une seule fois)
 defer(async () => {
   try {

@@ -85,7 +85,7 @@
     "todayHub": {
       "primaryMark": "Marcar hoy",
       "duoNudge": "Tu compañero te verá mañana →", 
-      "markHint": "Toca aquí para marcar tu reto del día", 
+      "markHint": "Incluso parcial, cuenta. 1 toque es suficiente.",
       "tapToOpen": "Ver el reto →",
       "ctaSub": "1 toque para validar tu día",
 "progressLabel": "{{percent}}% completado",
@@ -485,6 +485,49 @@
     "mailClientError": "No se puede abrir el cliente de correo",
     "mailOpenError": "Error al abrir la aplicación de correo"
   },
+  "journal": {
+      "sectionTitle": "Diario",
+      "title": "Diario",
+      "entries": "entradas",
+      "seeAll": "Ver todo →",
+      "daysMarked": "días",
+      "logsCount": "registros",
+      "topMood": "humor",
+      "recent": "Recientes",
+      "emptyHint": "Empieza a marcar días para ver tu historial aquí.",
+      "markedNoLog": "Marcado ✓",
+      "noLog": "Sin registro",
+      "tapToClose": "Toca para cerrar",
+      "challengeProgress": "Progreso · {{done}}/{{total}}",
+      "empty": {
+        "title": "Aún no hay entradas",
+        "sub": "Después de cada check-in, podrás registrar tu humor, un valor y una nota libre."
+      },
+      "legend": {
+        "future": "Próximo",
+        "done": "Marcado",
+        "mood": "Con humor"
+      }
+    },
+    "perf": {
+      "sheet": {
+        "title": "¿Cómo fue?",
+        "sub": "Todo opcional · Enriquece tu historial",
+        "valueLabel": "Valor ({{unit}})",
+        "valueLabelGeneric": "Valor alcanzado (opcional)",
+        "valuePlaceholder": "Meta: {{target}}{{unit}}",
+        "valuePlaceholderGeneric": "Ej: 8000, 2.5, 45…",
+        "noteLabel": "Nota (opcional)",
+        "notePlaceholder": "Lo que pasó, cómo te sentiste, contexto…",
+        "cta": "Guardar",
+        "skip": "Omitir"
+      },
+      "mood": {
+        "perfect": "Perfecto",
+        "good": "Bien",
+        "hard": "Difícil"
+      }
+    },
   "cards": {
     "brandName": "ChallengeTies",
     "accessibility": {
@@ -1092,8 +1135,13 @@
   "footerHint": "La invitación expira en 72h · Máx 5/día",
   "sameChallengeLabel": "Hace este reto en solitario",
   "sameCategoryLabel": "Categoría: {{category}}",
-  "availableLabel": "Disponible para un dúo"
-},
+  "availableLabel": "Disponible para un dúo",
+"searchPlaceholder": "Buscar por username…",
+      "searchingUser": "Buscando perfil…",
+      "searchError": "No se puede buscar este perfil.",
+      "noSearchResultTitle": "No se encontró ningún perfil",
+      "noSearchResultDesc": "Comprueba el username o pide a esa persona que active la disponibilidad para dúo."
+    },
 "feed": {
   "shareOnFeed": "Compartir mis logros",
   "shareOnFeedSub": "Visible para toda la comunidad",
@@ -1166,22 +1214,35 @@
 },
 "weeklyReport": {
   "sectionTitle": "Resumen semanal",
+  "scoreElite": "🔥 Élite",
+"scoreGood": "⚡ En forma",
+"scoreMid": "💪 En camino",
+"scoreIrregular": "😐 Irregular",
+"scoreLow": "😴 A relanzar",
+"vsPrevWeek": "vs semana pasada",
+"dayMon": "L", "dayTue": "M", "dayWed": "X",
+"dayThu": "J", "dayFri": "V", "daySat": "S", "daySun": "D",
+"streakUnit": "d",
   "btnTitle": "Mi resumen de la semana",
-  "btnSubAvailable": "Informe disponible — ver mi momentum",
+  "btnSubAvailable": "Informe disponible — ver mi impulso",
   "btnSubEmpty": "Disponible cada lunes tras una semana activa",
   "newBadge": "VER",
   "noReportTitle": "Aún sin resumen",
   "noReportDesc": "Tu primer resumen estará disponible el próximo lunes tras una semana de actividad.",
   "kicker": "Resumen semanal",
-  "title": "Tu momentum",
+  "title": "Tu impulso",
   "activeDays": "días activos",
   "trophies": "trofeos",
-  "momentum": "momentum",
+  "momentum": "impulso",
+  "streak": "mejor racha",
   "daysOfWeek": "Esta semana",
   "diagTitle": "Lo que veo",
-  "goalTitle": "Objetivo esta semana",
-  "goalAccept": "¡Acepto el reto! 💪",
-  "close": "Cerrar"
+  "goalTitle": "Objetivo de esta semana",
+  "goalSub": "Establecido automáticamente según tu ritmo",
+  "goalAccept": "Acepto el reto 💪",
+  "close": "Cerrar",
+  "challengesSection": "Tus retos",
+  "globalProgress": "Progreso global"
 },
   "forge": {
   "title": "La Forja",
@@ -1381,6 +1442,7 @@
   },
  "challengeDetails": {
   "cta_take": "Empezar reto",
+  "daysLeft": "{{count}} día{{count, plural, one {} other {s}}} restante{{count, plural, one {} other {s}}}",
   "reviewsSubtitle": "Opiniones reales para elegir mejor.",
       "noReviewsHint": "Sé el primero en dejar una reseña útil. 10 segundos, impacto real.",
       "reviewPrivacy": "Sé útil, claro y amable.",
@@ -4960,6 +5022,18 @@
 },
   "notificationsPush": {
     "daily1": "Un reto hoy puede cambiar tu día. ¿Listo?",
+    "dailyPersonal1": "✅ \"{{title}}\" te espera hoy.",
+"dailyPersonal2": "🔥 Un día más en \"{{title}}\". Vamos.",
+"dailyPersonal3": "⚡ \"{{title}}\" — 1 clic para validar.",
+"dailyPersonalMulti1": "✅ \"{{title}}\" y {{count}} más por validar.",
+"dailyPersonalMulti2": "🔥 {{count}} retos te esperan hoy.",
+"latePersonal1": "⏰ \"{{title}}\" — quedan pocas horas.",
+"latePersonal2": "🚨 No abandones \"{{title}}\" esta noche.",
+"latePersonal3": "🔥 \"{{title}}\" espera tu check-in. Última oportunidad.",
+"latePersonalMulti1": "⏰ \"{{title}}\" y {{count}} más sin validar.",
+"latePersonalMulti2": "🚨 {{count}} retos sin validar. Esta noche es tu momento.",
+"streakDangerPersonal1": "🚨 \"{{title}}\" — racha en peligro. Valida antes de medianoche.",
+"streakDangerPersonal2": "⚠️ Racha \"{{title}}\" en juego. Pocas horas restantes.",
     "postCompletionTitle": "🔥 ¿Listo para lo siguiente?",
     "postCompletionBody": "Terminaste un reto. ¿Cuál es tu próximo desafío?",
     "streakDangerTitle": "🚨 ¡Racha en peligro!",

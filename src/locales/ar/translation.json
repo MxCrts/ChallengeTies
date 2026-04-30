@@ -535,7 +535,7 @@
     "todayHub": {
        "primaryMark": "علِّم اليوم",
        "duoNudge": "شريكك سيراك غداً →", 
-       "markHint": "اضغط هنا لتسجيل تحديك", 
+       "markHint": "حتى جزئياً، يُحتسب. نقرة واحدة تكفي.",
        "tapToOpen": "رؤية التحدي →",
        "ctaSub": "نقرة واحدة للتحقق من يومك",
 "progressLabel": "{{percent}}% مكتمل",
@@ -736,6 +736,7 @@
  "challengeDetails": {
   "cta_take": "ابدأ التحدي",
   "reviewsSubtitle": "آراء حقيقية لاختيار أفضل.",
+  "daysLeft": "{{count}} يوم متبقٍ",
   "noReviewsHint": "كن أول من يترك تقييماً مفيداً. 10 ثوانٍ، تأثير حقيقي.",
   "reviewPrivacy": "كن مفيداً، واضحاً، ولطيفاً.",
 
@@ -1939,6 +1940,49 @@
     "missingChoiceBody": "اختر تحديًا للمتابعة."
   }
 },
+"journal": {
+      "sectionTitle": "السجل",
+      "title": "السجل",
+      "entries": "مدخلات",
+      "seeAll": "عرض الكل →",
+      "daysMarked": "أيام",
+      "logsCount": "سجلات",
+      "topMood": "المزاج",
+      "recent": "الأخيرة",
+      "emptyHint": "ابدأ بتحديد الأيام لرؤية سجلك هنا.",
+      "markedNoLog": "تم التحديد ✓",
+      "noLog": "لا يوجد سجل",
+      "tapToClose": "اضغط للإغلاق",
+      "challengeProgress": "التقدم · {{done}}/{{total}}",
+      "empty": {
+        "title": "لا توجد مدخلات بعد",
+        "sub": "بعد كل تسجيل، يمكنك إضافة مزاجك وقيمة وملاحظة حرة."
+      },
+      "legend": {
+        "future": "قادم",
+        "done": "محدَّد",
+        "mood": "مع مزاج"
+      }
+    },
+    "perf": {
+      "sheet": {
+        "title": "كيف سارت الأمور؟",
+        "sub": "كل شيء اختياري · يُثري سجلك",
+        "valueLabel": "القيمة ({{unit}})",
+        "valueLabelGeneric": "القيمة المحققة (اختياري)",
+        "valuePlaceholder": "الهدف: {{target}}{{unit}}",
+        "valuePlaceholderGeneric": "مثال: 8000، 2.5، 45…",
+        "noteLabel": "ملاحظة (اختيارية)",
+        "notePlaceholder": "ما حدث، شعورك، السياق…",
+        "cta": "حفظ",
+        "skip": "تخطي"
+      },
+      "mood": {
+        "perfect": "ممتاز",
+        "good": "جيد",
+        "hard": "صعب"
+      }
+    },
 "heatmap": {
   "title": "النشاط",
   "subtitle": "آخر 16 أسبوعاً",
@@ -1952,22 +1996,35 @@
 },
 "weeklyReport": {
   "sectionTitle": "التقرير الأسبوعي",
-  "btnTitle": "تقريري لهذا الأسبوع",
-  "btnSubAvailable": "التقرير متاح — عرض تقدّمي",
-  "btnSubEmpty": "متاح كل اثنين بعد أسبوع نشاط",
+  "scoreElite": "🔥 نخبة",
+"scoreGood": "⚡ في أفضل حال",
+"scoreMid": "💪 في الطريق",
+"scoreIrregular": "😐 غير منتظم",
+"scoreLow": "😴 حان وقت البداية",
+"vsPrevWeek": "مقارنة بالأسبوع الماضي",
+"dayMon": "ن", "dayTue": "ث", "dayWed": "ر",
+"dayThu": "خ", "dayFri": "ج", "daySat": "س", "daySun": "ح",
+"streakUnit": "ي",
+  "btnTitle": "تقريري الأسبوعي",
+  "btnSubAvailable": "التقرير متاح — شاهد زخمي",
+  "btnSubEmpty": "متاح كل يوم اثنين بعد أسبوع نشط",
   "newBadge": "عرض",
   "noReportTitle": "لا يوجد تقرير بعد",
-  "noReportDesc": "سيكون تقريرك الأول متاحًا الاثنين القادم بعد أسبوع من النشاط.",
-  "kicker": "تقرير الأسبوع",
+  "noReportDesc": "سيكون تقريرك الأول متاحاً الاثنين القادم بعد أسبوع من النشاط.",
+  "kicker": "ملخص الأسبوع",
   "title": "زخمك",
   "activeDays": "أيام نشطة",
-  "trophies": "كؤوس",
+  "trophies": "الكؤوس",
   "momentum": "الزخم",
+  "streak": "أفضل سلسلة",
   "daysOfWeek": "هذا الأسبوع",
   "diagTitle": "ما أراه",
   "goalTitle": "هدف هذا الأسبوع",
+  "goalSub": "يُحدَّد تلقائياً وفق إيقاعك",
   "goalAccept": "أقبل التحدي 💪",
-  "close": "إغلاق"
+  "close": "إغلاق",
+  "challengesSection": "تحدياتك",
+  "globalProgress": "التقدم الإجمالي"
 },
 "forge": {
   "title": "المِسبك",
@@ -4831,6 +4888,18 @@
 },
   "notificationsPush": {
     "daily1": "تحدٍّ واحد اليوم يكفي لتغيير يومك. جاهز؟",
+    "dailyPersonal1": "✅ «{{title}}» ينتظرك اليوم.",
+"dailyPersonal2": "🔥 يوم آخر في «{{title}}». هيا.",
+"dailyPersonal3": "⚡ «{{title}}» — نقرة واحدة للتأكيد.",
+"dailyPersonalMulti1": "✅ «{{title}}» و{{count}} تحديات أخرى بانتظارك.",
+"dailyPersonalMulti2": "🔥 {{count}} تحديات تنتظرك اليوم.",
+"latePersonal1": "⏰ «{{title}}» — بضع ساعات متبقية.",
+"latePersonal2": "🚨 لا تتخلى عن «{{title}}» الليلة.",
+"latePersonal3": "🔥 «{{title}}» ينتظر تسجيل حضورك. آخر فرصة.",
+"latePersonalMulti1": "⏰ «{{title}}» و{{count}} آخرين لم يُسجَّلوا.",
+"latePersonalMulti2": "🚨 {{count}} تحديات غير مكتملة. الليلة هي فرصتك.",
+"streakDangerPersonal1": "🚨 «{{title}}» — سلسلتك في خطر. سجّل قبل منتصف الليل.",
+"streakDangerPersonal2": "⚠️ سلسلة «{{title}}» على المحك. بضع ساعات متبقية.",
     "postCompletionTitle": "🔥 مستعد للتالي?",
     "postCompletionBody": "أنهيت تحديًا. ما هي خطوتك التالية؟",
     "streakDangerTitle": "🚨 السلسلة في خطر!",
@@ -4986,6 +5055,11 @@
   "addInterestsHere": "اختيار الفئات",
 "matching": {
   "sectionTitle": "الثنائي والدعوات",
+   "searchPlaceholder": "البحث باسم المستخدم…",
+      "searchingUser": "جارٍ البحث عن الملف الشخصي…",
+      "searchError": "تعذر البحث عن هذا الملف الشخصي.",
+      "noSearchResultTitle": "لم يتم العثور على ملف شخصي",
+      "noSearchResultDesc": "تحقق من اسم المستخدم أو اطلب من الشخص تفعيل توفر الثنائي.",
   "duoAvailableLabel": "متاح للعب الثنائي",
   "duoAvailableOn": "تظهر في المطابقات",
   "duoAvailableOff": "لا تظهر في المطابقات",

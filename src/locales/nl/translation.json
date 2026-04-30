@@ -564,6 +564,7 @@
  "challengeDetails": {
   "cta_take": "Start challenge",
   "reviewsSubtitle": "Echte reviews voor een betere keuze.",
+  "daysLeft": "{{count}} dag{{count, plural, one {} other {en}}} over",
       "noReviewsHint": "Wees de eerste met een nuttige review. 10 seconden, echte impact.",
       "reviewPrivacy": "Houd het nuttig, duidelijk en vriendelijk.",
     "cta_markToday": "Markeer vandaag",
@@ -1545,6 +1546,11 @@
 "matching": {
   "sectionTitle": "Duo & uitnodigingen",
   "duoAvailableLabel": "Beschikbaar voor een duo",
+   "searchPlaceholder": "Zoeken op username…",
+      "searchingUser": "Profiel zoeken…",
+      "searchError": "Kan dit profiel niet zoeken.",
+      "noSearchResultTitle": "Geen profiel gevonden",
+      "noSearchResultDesc": "Controleer de username of vraag deze persoon om duo-beschikbaarheid in te schakelen.",
   "duoAvailableOn": "Je verschijnt in matches",
   "duoAvailableOff": "Je verschijnt niet in matches",
   "inboxBtnLabel": "Duo-uitnodigingen",
@@ -2467,6 +2473,49 @@
       "description": "Neem een ontspannende avondroutine aan om de kwaliteit van je slaap te verbeteren."
     }
   },
+  "journal": {
+      "sectionTitle": "Dagboek",
+      "title": "Dagboek",
+      "entries": "items",
+      "seeAll": "Alles zien →",
+      "daysMarked": "dagen",
+      "logsCount": "logs",
+      "topMood": "stemming",
+      "recent": "Recent",
+      "emptyHint": "Begin dagen te markeren om je geschiedenis hier te zien.",
+      "markedNoLog": "Gemarkeerd ✓",
+      "noLog": "Geen log",
+      "tapToClose": "Tik om te sluiten",
+      "challengeProgress": "Voortgang · {{done}}/{{total}}",
+      "empty": {
+        "title": "Nog geen items",
+        "sub": "Na elke check-in kun je stemming, waarde en vrije notitie toevoegen."
+      },
+      "legend": {
+        "future": "Nog te doen",
+        "done": "Gemarkeerd",
+        "mood": "Met stemming"
+      }
+    },
+    "perf": {
+      "sheet": {
+        "title": "Hoe ging het?",
+        "sub": "Alles optioneel · Verrijkt je geschiedenis",
+        "valueLabel": "Waarde ({{unit}})",
+        "valueLabelGeneric": "Bereikte waarde (optioneel)",
+        "valuePlaceholder": "Doel: {{target}}{{unit}}",
+        "valuePlaceholderGeneric": "Bijv. 8000, 2.5, 45…",
+        "noteLabel": "Notitie (optioneel)",
+        "notePlaceholder": "Wat er gebeurde, hoe je je voelde, context…",
+        "cta": "Opslaan",
+        "skip": "Overslaan"
+      },
+      "mood": {
+        "perfect": "Perfect",
+        "good": "Goed",
+        "hard": "Moeilijk"
+      }
+    },
   "imagePickFailed": "Kan de afbeelding niet selecteren.",
   "allFieldsRequired": "Alle velden zijn verplicht (de afbeelding is optioneel).",
   "mustBeLoggedIn": "Je moet ingelogd zijn om een challenge te maken.",
@@ -2584,6 +2633,18 @@
 },
   "notificationsPush": {
      "daily1": "Eén challenge vandaag kan je dag veranderen. Klaar?",
+     "dailyPersonal1": "✅ \"{{title}}\" wacht vandaag op je.",
+"dailyPersonal2": "🔥 Nog een dag bij \"{{title}}\". Kom op.",
+"dailyPersonal3": "⚡ \"{{title}}\" — 1 klik om in te checken.",
+"dailyPersonalMulti1": "✅ \"{{title}}\" en {{count}} andere(n) te valideren.",
+"dailyPersonalMulti2": "🔥 {{count}} uitdagingen wachten vandaag op je.",
+"latePersonal1": "⏰ \"{{title}}\" — nog een paar uur.",
+"latePersonal2": "🚨 Geef \"{{title}}\" vanavond niet op.",
+"latePersonal3": "🔥 \"{{title}}\" wacht op je check-in. Laatste kans.",
+"latePersonalMulti1": "⏰ \"{{title}}\" en {{count}} andere(n) niet ingecheckt.",
+"latePersonalMulti2": "🚨 {{count}} uitdagingen open. Vanavond is je kans.",
+"streakDangerPersonal1": "🚨 \"{{title}}\" — reeks in gevaar. Check in voor middernacht.",
+"streakDangerPersonal2": "⚠️ Reeks \"{{title}}\" op het spel. Nog een paar uur.",
      "postCompletionTitle": "🔥 Klaar voor het volgende?",
     "postCompletionBody": "Je hebt een uitdaging voltooid. Wat is je volgende stap?",
      "streakDangerTitle": "🚨 Streak in gevaar!",
@@ -2725,7 +2786,7 @@
     "todayHub": {
       "primaryMark": "Vandaag afvinken",
       "duoNudge": "Je partner ziet je morgen →", 
-      "markHint": "Tik hier om je uitdaging af te vinken", 
+      "markHint": "Ook gedeeltelijk telt het. 1 tik is genoeg.",
       "tapToOpen": "Uitdaging bekijken →",
       "ctaSub": "1 tik om je dag te valideren",
 "progressLabel": "{{percent}}% voltooid",
@@ -5208,10 +5269,19 @@
 },
 "weeklyReport": {
   "sectionTitle": "Weekrapport",
+  "scoreElite": "🔥 Elite",
+"scoreGood": "⚡ In vorm",
+"scoreMid": "💪 Op weg",
+"scoreIrregular": "😐 Onregelmatig",
+"scoreLow": "😴 Opnieuw starten",
+"vsPrevWeek": "vs vorige week",
+"dayMon": "M", "dayTue": "D", "dayWed": "W",
+"dayThu": "D", "dayFri": "V", "daySat": "Z", "daySun": "Z",
+"streakUnit": "d",
   "btnTitle": "Mijn weekrapport",
   "btnSubAvailable": "Rapport beschikbaar — bekijk mijn momentum",
   "btnSubEmpty": "Elke maandag beschikbaar na een actieve week",
-  "newBadge": "ZIEN",
+  "newBadge": "BEKIJK",
   "noReportTitle": "Nog geen rapport",
   "noReportDesc": "Je eerste rapport is volgende maandag beschikbaar na een week activiteit.",
   "kicker": "Weekrapport",
@@ -5219,11 +5289,15 @@
   "activeDays": "actieve dagen",
   "trophies": "trofeeën",
   "momentum": "momentum",
+  "streak": "beste reeks",
   "daysOfWeek": "Deze week",
   "diagTitle": "Wat ik zie",
-  "goalTitle": "Doel deze week",
-  "goalAccept": "Ik ga voor de uitdaging 💪",
-  "close": "Sluiten"
+  "goalTitle": "Doel van deze week",
+  "goalSub": "Automatisch ingesteld op basis van jouw tempo",
+  "goalAccept": "Ik ga de uitdaging aan 💪",
+  "close": "Sluiten",
+  "challengesSection": "Jouw uitdagingen",
+  "globalProgress": "Algemene voortgang"
 },
 "forge": {
   "title": "De Smidse",

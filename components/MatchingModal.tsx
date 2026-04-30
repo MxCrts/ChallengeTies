@@ -13,6 +13,7 @@ import {
   ScrollView,
   Alert,
   Dimensions,
+  TextInput,
 } from "react-native";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "@/context/ThemeContext";
@@ -30,8 +31,9 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image as ExpoImage } from "expo-image";
 import {
   findMatches,
-  sendMatchingInvitation,
-  type MatchCandidate,
+searchMatchesByUsername,
+sendMatchingInvitation,
+type MatchCandidate,
 } from "@/services/matchingService";
 
 const { width: SW } = Dimensions.get("window");
@@ -168,6 +170,8 @@ const MatchingModal: React.FC<Props> = ({
   const [sentTo,     setSentTo]     = useState<Set<string>>(new Set());
   const [sendingTo,  setSendingTo]  = useState<string | null>(null);
   const [error,      setError]      = useState<string | null>(null);
+  const [searchText, setSearchText] = useState("");
+const [searching, setSearching] = useState(false);
 
   const styles = useMemo(() => createStyles(isDark, th, insets), [isDark, th, insets]);
 
@@ -179,6 +183,49 @@ const MatchingModal: React.FC<Props> = ({
       .catch(() => setError(t("matching.loadError", { defaultValue: "Impossible de charger les profils." })))
       .finally(() => setLoading(false));
   }, [visible, challengeId, challengeCategory, selectedDays]);
+
+  useEffect(() => {
+  if (!visible || !challengeId) return;
+
+  const q = searchText.trim().toLowerCase();
+
+  if (q.length < 2) {
+    setError(null);
+    return;
+  }
+
+  let cancelled = false;
+  setSearching(true);
+  setError(null);
+
+  const timer = setTimeout(async () => {
+    try {
+      const results = await searchMatchesByUsername({
+        usernameQuery: q,
+        challengeId,
+        challengeCategory,
+        selectedDays,
+      });
+
+      if (!cancelled) {
+        setCandidates(results);
+      }
+    } catch (e) {
+      if (!cancelled) {
+        setError(t("matching.searchError", {
+          defaultValue: "Impossible de rechercher ce profil.",
+        }));
+      }
+    } finally {
+      if (!cancelled) setSearching(false);
+    }
+  }, 320);
+
+  return () => {
+    cancelled = true;
+    clearTimeout(timer);
+  };
+}, [searchText, visible, challengeId, challengeCategory, selectedDays, t]);
 
   const handleInvite = useCallback(async (uid: string, username: string) => {
     if (sendingTo) return;
@@ -235,11 +282,46 @@ const MatchingModal: React.FC<Props> = ({
               {/* Divider */}
               <View style={styles.divider} />
 
+              <View style={styles.searchWrap}>
+  <Ionicons
+    name="search-outline"
+    size={ns(16)}
+    color={isDark ? "rgba(255,255,255,0.42)" : "rgba(15,23,42,0.38)"}
+  />
+
+  <TextInput
+    value={searchText}
+    onChangeText={setSearchText}
+    placeholder={t("matching.searchPlaceholder", {
+      defaultValue: "Rechercher par username…",
+    })}
+    placeholderTextColor={isDark ? "rgba(255,255,255,0.34)" : "rgba(15,23,42,0.34)"}
+    autoCapitalize="none"
+    autoCorrect={false}
+    returnKeyType="search"
+    style={styles.searchInput}
+  />
+
+  {searchText.trim().length > 0 && (
+    <Pressable onPress={() => setSearchText("")} hitSlop={8}>
+      <Ionicons
+        name="close-circle"
+        size={ns(17)}
+        color={isDark ? "rgba(255,255,255,0.42)" : "rgba(15,23,42,0.36)"}
+      />
+    </Pressable>
+  )}
+</View>
+
               {/* Body */}
-              {loading ? (
+             {loading || searching ? (
                 <View style={styles.loadingWrap}>
                   <ActivityIndicator size="small" color={ORANGE} />
-                  <Text style={styles.loadingText}>{t("matching.searching", { defaultValue: "Recherche de binômes…" })}</Text>
+                 <Text style={styles.loadingText}>
+  {searching
+    ? t("matching.searchingUser", { defaultValue: "Recherche du profil…" })
+    : t("matching.searching", { defaultValue: "Recherche de binômes…" })}
+</Text>
                 </View>
               ) : error ? (
                 <View style={styles.emptyWrap}>
@@ -251,8 +333,20 @@ const MatchingModal: React.FC<Props> = ({
                   <LinearGradient colors={[ORANGE + "20", "transparent"]} style={styles.emptyIconWrap}>
                     <Ionicons name="people-outline" size={ns(40)} color={ORANGE + "90"} />
                   </LinearGradient>
-                  <Text style={styles.emptyTitle}>{t("matching.emptyTitle", { defaultValue: "Aucun binôme trouvé" })}</Text>
-                  <Text style={styles.emptyText}>{t("matching.emptyDesc", { defaultValue: "Active \"Disponible pour un duo\" dans ton profil pour apparaître ici." })}</Text>
+                  <Text style={styles.emptyTitle}>
+  {searchText.trim().length >= 2
+    ? t("matching.noSearchResultTitle", { defaultValue: "Aucun profil trouvé" })
+    : t("matching.emptyTitle", { defaultValue: "Aucun binôme trouvé" })}
+</Text>
+                  <Text style={styles.emptyText}>
+  {searchText.trim().length >= 2
+    ? t("matching.noSearchResultDesc", {
+        defaultValue: "Vérifie le username ou demande à la personne d’activer sa disponibilité duo.",
+      })
+    : t("matching.emptyDesc", {
+        defaultValue: "Active \"Disponible pour un duo\" dans ton profil pour apparaître ici.",
+      })}
+</Text>
                 </View>
               ) : (
                 <ScrollView style={styles.list} contentContainerStyle={styles.listContent} showsVerticalScrollIndicator={false} bounces={false}>
@@ -305,6 +399,27 @@ const createStyles = (isDark: boolean, th: Theme, insets: { top: number; bottom:
     subtitle: { fontFamily: "Comfortaa_400Regular", fontSize: ns(11.5), color: isDark ? "rgba(255,255,255,0.48)" : "rgba(0,0,0,0.42)", marginTop: ns(2) },
     closeBtn: { width: ns(30), height: ns(30), borderRadius: ns(10), alignItems: "center", justifyContent: "center", backgroundColor: isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.05)" },
     divider:  { height: 1, backgroundColor: isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.06)", marginBottom: ns(10) },
+    searchWrap: {
+  flexDirection: "row",
+  alignItems: "center",
+  gap: ns(8),
+  borderRadius: ns(14),
+  borderWidth: 1,
+  borderColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.07)",
+  backgroundColor: isDark ? "rgba(255,255,255,0.045)" : "rgba(255,255,255,0.72)",
+  paddingHorizontal: ns(12),
+  height: ns(42),
+  marginBottom: ns(10),
+},
+searchInput: {
+  flex: 1,
+  minWidth: 0,
+  fontFamily: "Comfortaa_400Regular",
+  fontSize: ns(12.5),
+  color: isDark ? "#F8FAFC" : "#0F172A",
+  paddingVertical: 0,
+  includeFontPadding: false,
+},
 
     loadingWrap:  { alignItems: "center", justifyContent: "center", paddingVertical: ns(40), gap: ns(12) },
     loadingText:  { fontFamily: "Comfortaa_400Regular", fontSize: ns(13), color: isDark ? "rgba(255,255,255,0.48)" : "rgba(0,0,0,0.45)" },

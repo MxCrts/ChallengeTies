@@ -85,7 +85,7 @@
     "todayHub": {
       "primaryMark": "Heute abhaken",
       "duoNudge": "Dein Partner sieht dich morgen →", 
-      "markHint": "Hier tippen um deine Challenge abzuhaken", 
+      "markHint":  "Auch teilweise zählt es. 1 Tipp reicht.",
       "tapToOpen": "Challenge ansehen →",
       "ctaSub": "1 Tap um deinen Tag zu bestätigen",
 "progressLabel": "{{percent}}% abgeschlossen",
@@ -200,6 +200,49 @@
     "activatingDuo": "Duo wird aktiviert…",
     "updating": "Wird aktualisiert…"
   },
+  "journal": {
+      "sectionTitle": "Tagebuch",
+      "title": "Tagebuch",
+      "entries": "Einträge",
+      "seeAll": "Alle anzeigen →",
+      "daysMarked": "Tage",
+      "logsCount": "Logs",
+      "topMood": "Stimmung",
+      "recent": "Zuletzt",
+      "emptyHint": "Markiere Tage, um deinen Verlauf hier zu sehen.",
+      "markedNoLog": "Markiert ✓",
+      "noLog": "Kein Log",
+      "tapToClose": "Tippen zum Schließen",
+      "challengeProgress": "Fortschritt · {{done}}/{{total}}",
+      "empty": {
+        "title": "Noch keine Einträge",
+        "sub": "Nach jedem Check-in kannst du Stimmung, Wert und Notiz hinterlegen."
+      },
+      "legend": {
+        "future": "Noch ausstehend",
+        "done": "Markiert",
+        "mood": "Mit Stimmung"
+      }
+    },
+    "perf": {
+      "sheet": {
+        "title": "Wie lief es?",
+        "sub": "Alles optional · Bereichert dein Tagebuch",
+        "valueLabel": "Wert ({{unit}})",
+        "valueLabelGeneric": "Erreichter Wert (optional)",
+        "valuePlaceholder": "Ziel: {{target}}{{unit}}",
+        "valuePlaceholderGeneric": "Z.B. 8000, 2.5, 45…",
+        "noteLabel": "Notiz (optional)",
+        "notePlaceholder": "Was passiert ist, dein Gefühl, Kontext…",
+        "cta": "Speichern",
+        "skip": "Überspringen"
+      },
+      "mood": {
+        "perfect": "Perfekt",
+        "good": "Gut",
+        "hard": "Schwer"
+      }
+    },
   "profile": "Profil",
   "yourProfile": "Dein Profil",
   "addBioHere": "Biografie hier hinzufügen",
@@ -882,8 +925,13 @@
   "footerHint": "Einladung läuft in 72h ab · Max 5/Tag",
   "sameChallengeLabel": "Macht diese Challenge solo",
   "sameCategoryLabel": "Kategorie: {{category}}",
-  "availableLabel": "Für ein Duo verfügbar"
-},
+  "availableLabel": "Für ein Duo verfügbar",
+"searchPlaceholder": "Nach Username suchen…",
+      "searchingUser": "Profil wird gesucht…",
+      "searchError": "Dieses Profil kann nicht gesucht werden.",
+      "noSearchResultTitle": "Kein Profil gefunden",
+      "noSearchResultDesc": "Prüfe den Username oder bitte die Person, Duo-Verfügbarkeit zu aktivieren."
+    },
 "feed": {
   "shareOnFeed": "Meine Leistungen teilen",
   "shareOnFeedSub": "Für die gesamte Community sichtbar",
@@ -900,6 +948,7 @@
 },
   "challengeDetails": {
     "reviewsSubtitle": "Echte Bewertungen für bessere Entscheidungen.",
+    "daysLeft": "{{count}} Tag{{count, plural, one {} other {e}}} übrig",
       "noReviewsHint": "Sei der Erste mit einer hilfreichen Bewertung. 10 Sekunden, echte Wirkung.",
       "reviewPrivacy": "Bleib hilfreich, klar und freundlich.",
     "cta_take": "Challenge starten",
@@ -2702,6 +2751,18 @@
 },
   "notificationsPush": {
     "daily1": "Eine Challenge heute reicht, um deinen Tag zu drehen. Los?",
+    "dailyPersonal1": "✅ \"{{title}}\" wartet heute auf dich.",
+"dailyPersonal2": "🔥 Noch ein Tag bei \"{{title}}\". Los geht's.",
+"dailyPersonal3": "⚡ \"{{title}}\" — 1 Klick zum Einchecken.",
+"dailyPersonalMulti1": "✅ \"{{title}}\" und {{count}} weitere zu bestätigen.",
+"dailyPersonalMulti2": "🔥 {{count}} Challenges warten heute auf dich.",
+"latePersonal1": "⏰ \"{{title}}\" — noch ein paar Stunden.",
+"latePersonal2": "🚨 Gib \"{{title}}\" heute Abend nicht auf.",
+"latePersonal3": "🔥 \"{{title}}\" wartet auf deinen Check-in. Letzte Chance.",
+"latePersonalMulti1": "⏰ \"{{title}}\" und {{count}} weitere nicht eingecheckt.",
+"latePersonalMulti2": "🚨 {{count}} Challenges offen. Heute Abend ist deine Chance.",
+"streakDangerPersonal1": "🚨 \"{{title}}\" — Serie in Gefahr. Vor Mitternacht einchecken.",
+"streakDangerPersonal2": "⚠️ Serie \"{{title}}\" auf dem Spiel. Noch ein paar Stunden.",
     "postCompletionTitle": "🔥 Bereit für das Nächste?",
     "postCompletionBody": "Du hast eine Challenge abgeschlossen. Was kommt jetzt?",
     "streakDangerTitle": "🚨 Streak in Gefahr!",
@@ -5178,21 +5239,34 @@
 "weeklyReport": {
   "sectionTitle": "Wochenbericht",
   "btnTitle": "Mein Wochenbericht",
+  "scoreElite": "🔥 Elite",
+"scoreGood": "⚡ In Form",
+"scoreMid": "💪 Auf dem Weg",
+"scoreIrregular": "😐 Unregelmäßig",
+"scoreLow": "😴 Neustart nötig",
+"vsPrevWeek": "vs letzte Woche",
+"dayMon": "M", "dayTue": "D", "dayWed": "M",
+"dayThu": "D", "dayFri": "F", "daySat": "S", "daySun": "S",
+"streakUnit": "T",
   "btnSubAvailable": "Bericht verfügbar — Momentum ansehen",
   "btnSubEmpty": "Jeden Montag nach einer aktiven Woche verfügbar",
-  "newBadge": "SEHEN",
+  "newBadge": "ANSEHEN",
   "noReportTitle": "Noch kein Bericht",
-  "noReportDesc": "Dein erster Bericht ist nächsten Montag nach einer Aktivitätswoche verfügbar.",
+  "noReportDesc": "Dein erster Bericht ist nächsten Montag nach einer aktiven Woche verfügbar.",
   "kicker": "Wochenbericht",
   "title": "Dein Momentum",
   "activeDays": "aktive Tage",
   "trophies": "Trophäen",
   "momentum": "Momentum",
+  "streak": "beste Serie",
   "daysOfWeek": "Diese Woche",
   "diagTitle": "Was ich sehe",
-  "goalTitle": "Ziel diese Woche",
+  "goalTitle": "Ziel dieser Woche",
+  "goalSub": "Automatisch nach deinem Tempo festgelegt",
   "goalAccept": "Ich nehme die Herausforderung an 💪",
-  "close": "Schließen"
+  "close": "Schließen",
+  "challengesSection": "Deine Challenges",
+  "globalProgress": "Gesamtfortschritt"
 },
 "forge": {
   "title": "Die Schmiede",
