@@ -28,7 +28,7 @@ import Animated, {
   FadeInUp,
   interpolate,
 } from "react-native-reanimated";
-import Svg, { Circle, Line } from "react-native-svg";
+import Svg, { Circle } from "react-native-svg";
 import * as Haptics from "expo-haptics";
 
 const { width: W, height: H } = Dimensions.get("window");
@@ -55,7 +55,7 @@ export type ChallengeWeekStat = {
   id: string;
   title: string;
   category: string;
-  markedThisWeek: number;        // 0-7
+  markedThisWeek: number;
   totalDays: number;
   completedDays: number;
   streak: number;
@@ -65,18 +65,18 @@ export type ChallengeWeekStat = {
 };
 
 export type WeeklyReportData = {
-  weekLabel: string;     
-  weekId: string;        // ex: "12–18 mai 2025"
-  score: number;                 // 0–100 momentum score
+  weekLabel: string;
+  weekId: string;
+  score: number;
   prevScore: number;
-  totalMarked: number;           // total jours marqués cette semaine (tous défis)
+  totalMarked: number;
   trophiesThisWeek: number;
   bestStreak: number;
-  markedDaysBits: boolean[];     // [L,M,M,J,V,S,D] vrais jours marqués
+  markedDaysBits: boolean[];
   challenges: ChallengeWeekStat[];
-  diagnostic: string;            // texte court généré côté serveur/local
-  weekGoal: string;              // objectif de la semaine
-  weekGoalTarget: number;        // ex: 5 (marquer 5 jours)
+  diagnostic: string;
+  weekGoal: string;
+  weekGoalTarget: number;
 };
 
 type Props = {
@@ -90,16 +90,16 @@ type Props = {
 
 // ─── Momentum Ring ────────────────────────────────────────────────────────────
 function MomentumRing({
-   score,
-   prevScore,
-   isDark,
-   t,
- }: {
-   score: number;
-   prevScore: number;
-   isDark: boolean;
-   t: (key: string, opts?: any) => string;
- }) {
+  score,
+  prevScore,
+  isDark,
+  t,
+}: {
+  score: number;
+  prevScore: number;
+  isDark: boolean;
+  t: (key: string, opts?: any) => string;
+}) {
   const SIZE = ns(168);
   const SW = ns(14);
   const r = (SIZE - SW) / 2;
@@ -145,7 +145,7 @@ function MomentumRing({
   }));
 
   const glowStyle = useAnimatedStyle(() => ({
-    opacity: glow.value * 0.50,
+    opacity: glow.value * 0.5,
     transform: [{ scale: 1 + glow.value * 0.07 }],
   }));
 
@@ -157,16 +157,15 @@ function MomentumRing({
   const isUp = delta >= 0;
   const dColor = isUp ? "#4ADE80" : "#F87171";
 
- const scoreLabel =
-   score >= 90 ? t("weeklyReport.scoreElite", { defaultValue: "🔥 Elite" })
-   : score >= 70 ? t("weeklyReport.scoreGood", { defaultValue: "⚡ On fire" })
-   : score >= 50 ? t("weeklyReport.scoreMid", { defaultValue: "💪 Getting there" })
-   : score >= 30 ? t("weeklyReport.scoreIrregular", { defaultValue: "😐 Inconsistent" })
-   : t("weeklyReport.scoreLow", { defaultValue: "😴 Time to restart" });
+  const scoreLabel =
+    score >= 90 ? t("weeklyReport.scoreElite", { defaultValue: "🔥 Élite" })
+    : score >= 70 ? t("weeklyReport.scoreGood", { defaultValue: "⚡ En forme" })
+    : score >= 50 ? t("weeklyReport.scoreMid", { defaultValue: "💪 En route" })
+    : score >= 30 ? t("weeklyReport.scoreIrregular", { defaultValue: "😐 Irrégulier" })
+    : t("weeklyReport.scoreLow", { defaultValue: "😴 À relancer" });
 
   return (
     <View style={{ alignItems: "center" }}>
-      {/* Glow externe */}
       <Animated.View
         style={[
           {
@@ -192,7 +191,6 @@ function MomentumRing({
           }}
         >
           <Svg width={SIZE} height={SIZE}>
-            {/* Track */}
             <Circle
               cx={SIZE / 2}
               cy={SIZE / 2}
@@ -201,7 +199,6 @@ function MomentumRing({
               strokeWidth={SW}
               fill="none"
             />
-            {/* Fill */}
             <AnimCircle
               cx={SIZE / 2}
               cy={SIZE / 2}
@@ -216,7 +213,6 @@ function MomentumRing({
             />
           </Svg>
 
-          {/* Centre */}
           <View style={{ position: "absolute", alignItems: "center" }}>
             <Text
               style={{
@@ -243,7 +239,6 @@ function MomentumRing({
         </View>
       </Animated.View>
 
-      {/* Label niveau */}
       <Animated.View
         entering={FadeIn.delay(1200).duration(400)}
         style={{ marginTop: ns(10) }}
@@ -260,7 +255,6 @@ function MomentumRing({
         </Text>
       </Animated.View>
 
-      {/* Delta pill */}
       <Animated.View
         entering={FadeIn.delay(1400).duration(360)}
         style={{
@@ -292,44 +286,40 @@ function MomentumRing({
             color: dColor,
           }}
         >
-           {isUp ? `+${delta}` : `${delta}`} {t("weeklyReport.vsPrevWeek", { defaultValue: "vs last week" })}
+          {isUp ? `+${delta}` : `${delta}`} {t("weeklyReport.vsPrevWeek", { defaultValue: "vs semaine dernière" })}
         </Text>
       </Animated.View>
     </View>
   );
 }
 
-// ─── Days Dots réels ──────────────────────────────────────────────────────────
+// ─── Days Dots ────────────────────────────────────────────────────────────────
 function WeekDaysDots({
-   markedDaysBits,
-   isDark,
-   t,
- }: {
-   markedDaysBits: boolean[];
-   isDark: boolean;
-   t: (key: string, opts?: any) => string;
- }) {
-
+  markedDaysBits,
+  isDark,
+  t,
+}: {
+  markedDaysBits: boolean[];
+  isDark: boolean;
+  t: (key: string, opts?: any) => string;
+}) {
   const DAY_LABELS = [
-   t("weeklyReport.dayMon", { defaultValue: "M" }),
-   t("weeklyReport.dayTue", { defaultValue: "T" }),
-   t("weeklyReport.dayWed", { defaultValue: "W" }),
-   t("weeklyReport.dayThu", { defaultValue: "T" }),
-   t("weeklyReport.dayFri", { defaultValue: "F" }),
-   t("weeklyReport.daySat", { defaultValue: "S" }),
-   t("weeklyReport.daySun", { defaultValue: "S" }),
- ];
+    t("weeklyReport.dayMon", { defaultValue: "L" }),
+    t("weeklyReport.dayTue", { defaultValue: "M" }),
+    t("weeklyReport.dayWed", { defaultValue: "M" }),
+    t("weeklyReport.dayThu", { defaultValue: "J" }),
+    t("weeklyReport.dayFri", { defaultValue: "V" }),
+    t("weeklyReport.daySat", { defaultValue: "S" }),
+    t("weeklyReport.daySun", { defaultValue: "D" }),
+  ];
+
   const bits =
     markedDaysBits.length === 7
       ? markedDaysBits
-      : Array(7)
-          .fill(false)
-          .map((_, i) => markedDaysBits[i] ?? false);
+      : Array(7).fill(false).map((_, i) => markedDaysBits[i] ?? false);
 
   return (
-    <View
-      style={{ flexDirection: "row", gap: ns(6), justifyContent: "center" }}
-    >
+    <View style={{ flexDirection: "row", gap: ns(6), justifyContent: "center" }}>
       {DAY_LABELS.map((d, i) => {
         const marked = bits[i];
         return (
@@ -469,10 +459,7 @@ function ChallengeRow({
   t: (key: string, opts?: any) => string;
 }) {
   const pct =
-    stat.totalDays > 0
-      ? Math.min(1, stat.completedDays / stat.totalDays)
-      : 0;
-  const weekPct = stat.markedThisWeek / 7;
+    stat.totalDays > 0 ? Math.min(1, stat.completedDays / stat.totalDays) : 0;
 
   const barColor =
     stat.markedThisWeek >= 5
@@ -483,9 +470,7 @@ function ChallengeRow({
 
   const textPri = isDark ? "#FFFFFF" : "#1A0800";
   const textSec = isDark ? "rgba(255,255,255,0.45)" : "rgba(0,0,0,0.40)";
-  const borderCol = isDark
-    ? "rgba(255,255,255,0.08)"
-    : "rgba(249,115,22,0.12)";
+  const borderCol = isDark ? "rgba(255,255,255,0.08)" : "rgba(249,115,22,0.12)";
 
   return (
     <Animated.View
@@ -501,36 +486,17 @@ function ChallengeRow({
         gap: ns(10),
       }}
     >
-      {/* Header */}
-      <View
-        style={{
-          flexDirection: "row",
-          alignItems: "center",
-          justifyContent: "space-between",
-        }}
-      >
+      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
         <View style={{ flex: 1, gap: ns(2) }}>
           <Text
-            style={{
-              fontFamily: "Comfortaa_700Bold",
-              fontSize: ns(13),
-              color: textPri,
-            }}
+            style={{ fontFamily: "Comfortaa_700Bold", fontSize: ns(13), color: textPri }}
             numberOfLines={1}
             ellipsizeMode="tail"
           >
             {stat.title}
           </Text>
-          <View
-            style={{ flexDirection: "row", alignItems: "center", gap: ns(6) }}
-          >
-            <Text
-              style={{
-                fontFamily: "Comfortaa_400Regular",
-                fontSize: ns(10),
-                color: textSec,
-              }}
-            >
+          <View style={{ flexDirection: "row", alignItems: "center", gap: ns(6) }}>
+            <Text style={{ fontFamily: "Comfortaa_400Regular", fontSize: ns(10), color: textSec }}>
               {stat.category}
             </Text>
             {stat.isDuo && (
@@ -542,9 +508,7 @@ function ChallengeRow({
                   paddingHorizontal: ns(6),
                   paddingVertical: ns(2),
                   borderRadius: ns(999),
-                  backgroundColor: isDark
-                    ? "rgba(0,255,255,0.10)"
-                    : "rgba(55,48,163,0.08)",
+                  backgroundColor: isDark ? "rgba(0,255,255,0.10)" : "rgba(55,48,163,0.08)",
                 }}
               >
                 <Ionicons
@@ -568,7 +532,6 @@ function ChallengeRow({
           </View>
         </View>
 
-        {/* Streak */}
         {stat.streak > 0 && (
           <View
             style={{
@@ -583,27 +546,14 @@ function ChallengeRow({
             }}
           >
             <Text style={{ fontSize: ns(14) }}>🔥</Text>
-            <Text
-              style={{
-                fontFamily: "Comfortaa_700Bold",
-                fontSize: ns(11),
-                color: ORANGE,
-              }}
-            >
-             {stat.streak}{t("weeklyReport.streakUnit", { defaultValue: "d" })}
+            <Text style={{ fontFamily: "Comfortaa_700Bold", fontSize: ns(11), color: ORANGE }}>
+              {stat.streak}{t("weeklyReport.streakUnit", { defaultValue: "j" })}
             </Text>
           </View>
         )}
       </View>
 
-      {/* Mini dots semaine */}
-      <View
-        style={{
-          flexDirection: "row",
-          alignItems: "center",
-          gap: ns(4),
-        }}
-      >
+      <View style={{ flexDirection: "row", alignItems: "center", gap: ns(4) }}>
         {Array.from({ length: 7 }, (_, i) => {
           const marked = i < stat.markedThisWeek;
           const isPartnerMarked =
@@ -623,9 +573,7 @@ function ChallengeRow({
                     ? "rgba(255,255,255,0.07)"
                     : "rgba(0,0,0,0.05)",
                   borderWidth: marked ? 0 : StyleSheet.hairlineWidth,
-                  borderColor: isDark
-                    ? "rgba(255,255,255,0.10)"
-                    : "rgba(0,0,0,0.08)",
+                  borderColor: isDark ? "rgba(255,255,255,0.10)" : "rgba(0,0,0,0.08)",
                 }}
               />
               {stat.isDuo && (
@@ -669,33 +617,12 @@ function ChallengeRow({
         )}
       </View>
 
-      {/* Barre progression globale */}
       <View>
-        <View
-          style={{
-            flexDirection: "row",
-            justifyContent: "space-between",
-            marginBottom: ns(5),
-          }}
-        >
-          <Text
-            style={{
-              fontFamily: "Comfortaa_400Regular",
-              fontSize: ns(10),
-              color: textSec,
-            }}
-          >
-            {t("weeklyReport.globalProgress", {
-              defaultValue: "Progression globale",
-            })}
+        <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: ns(5) }}>
+          <Text style={{ fontFamily: "Comfortaa_400Regular", fontSize: ns(10), color: textSec }}>
+            {t("weeklyReport.globalProgress", { defaultValue: "Progression globale" })}
           </Text>
-          <Text
-            style={{
-              fontFamily: "Comfortaa_700Bold",
-              fontSize: ns(10),
-              color: textSec,
-            }}
-          >
+          <Text style={{ fontFamily: "Comfortaa_700Bold", fontSize: ns(10), color: textSec }}>
             {stat.completedDays}/{stat.totalDays}
           </Text>
         </View>
@@ -703,9 +630,7 @@ function ChallengeRow({
           style={{
             height: ns(5),
             borderRadius: ns(999),
-            backgroundColor: isDark
-              ? "rgba(255,255,255,0.07)"
-              : "rgba(0,0,0,0.06)",
+            backgroundColor: isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.06)",
             overflow: "hidden",
           }}
         >
@@ -734,7 +659,9 @@ function GoalBar({
   target: number;
   isDark: boolean;
 }) {
-  const ratio = target > 0 ? Math.min(1, current / target) : 0;
+  // FIX: target > 0 garanti, sinon fallback 7
+  const safeTarget = target > 0 ? target : 7;
+  const ratio = Math.min(1, current / safeTarget);
   const pct = Math.round(ratio * 100);
   const barW = useSharedValue(0);
 
@@ -751,13 +678,7 @@ function GoalBar({
 
   return (
     <View style={{ gap: ns(8) }}>
-      <View
-        style={{
-          flexDirection: "row",
-          justifyContent: "space-between",
-          alignItems: "center",
-        }}
-      >
+      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
         <Text
           style={{
             fontFamily: "Comfortaa_700Bold",
@@ -765,8 +686,7 @@ function GoalBar({
             color: isDark ? "rgba(255,255,255,0.60)" : "rgba(0,0,0,0.50)",
           }}
         >
-          {current} / {target}{" "}
-          {current >= target ? "✅" : ""}
+          {current} / {safeTarget} {current >= safeTarget ? "✅" : ""}
         </Text>
         <Text
           style={{
@@ -782,9 +702,7 @@ function GoalBar({
         style={{
           height: ns(8),
           borderRadius: ns(999),
-          backgroundColor: isDark
-            ? "rgba(255,255,255,0.08)"
-            : "rgba(0,0,0,0.06)",
+          backgroundColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)",
           overflow: "hidden",
         }}
       >
@@ -820,24 +738,28 @@ export default function WeeklyReportModal({
     : (["rgba(255,255,255,0.99)", "rgba(255,247,240,0.97)"] as const);
   const borderCol = isDark ? wa(ORANGE, 0.18) : wa(ORANGE, 0.12);
   const textPri = isDark ? "#FFFFFF" : "#1A0800";
-  const textSec = isDark
-    ? "rgba(255,255,255,0.36)"
-    : "rgba(0,0,0,0.34)";
-  const textBody = isDark
-    ? "rgba(255,255,255,0.78)"
-    : "rgba(0,0,0,0.68)";
+  const textSec = isDark ? "rgba(255,255,255,0.36)" : "rgba(0,0,0,0.34)";
+  const textBody = isDark ? "rgba(255,255,255,0.78)" : "rgba(0,0,0,0.68)";
 
   const sheetH = Math.min(H * 0.94, H - insets.top - 6);
 
   const safeMarkedDaysBits = Array.isArray(data?.markedDaysBits)
-  ? data.markedDaysBits
-  : [false, false, false, false, false, false, false];
+    ? data.markedDaysBits
+    : [false, false, false, false, false, false, false];
 
-const safeChallenges = Array.isArray(data?.challenges)
-  ? data.challenges
-  : [];
+  const safeChallenges = Array.isArray(data?.challenges) ? data.challenges : [];
+  const markedCount = safeMarkedDaysBits.filter(Boolean).length;
 
-const markedCount = safeMarkedDaysBits.filter(Boolean).length;
+  // FIX: weekGoalTarget guard
+  const safeTarget = (data?.weekGoalTarget ?? 0) > 0 ? data.weekGoalTarget : 7;
+
+  // FIX: weekGoal fallback si vide
+  const safeWeekGoal =
+    typeof data?.weekGoal === "string" && data.weekGoal.trim().length > 0
+      ? data.weekGoal
+      : t("weeklyReport.goalDefault", {
+          defaultValue: "Marque au moins un jour cette semaine pour maintenir ton momentum.",
+        });
 
   return (
     <Modal
@@ -887,7 +809,7 @@ const markedCount = safeMarkedDaysBits.filter(Boolean).length;
             }}
           />
 
-          {/* ── Header fixe ── */}
+          {/* Header */}
           <View
             style={{
               paddingTop: ns(16),
@@ -896,20 +818,16 @@ const markedCount = safeMarkedDaysBits.filter(Boolean).length;
               alignItems: "center",
             }}
           >
-            {/* Handle */}
             <View
               style={{
                 width: ns(40),
                 height: ns(4),
                 borderRadius: ns(2),
-                backgroundColor: isDark
-                  ? "rgba(255,255,255,0.14)"
-                  : "rgba(0,0,0,0.10)",
+                backgroundColor: isDark ? "rgba(255,255,255,0.14)" : "rgba(0,0,0,0.10)",
                 marginBottom: ns(16),
               }}
             />
 
-            {/* Kicker + semaine */}
             <View
               style={{
                 flexDirection: "row",
@@ -965,7 +883,7 @@ const markedCount = safeMarkedDaysBits.filter(Boolean).length;
             </Text>
           </View>
 
-          {/* ── ScrollView ── */}
+          {/* ScrollView */}
           <ScrollView
             showsVerticalScrollIndicator={false}
             bounces
@@ -977,20 +895,20 @@ const markedCount = safeMarkedDaysBits.filter(Boolean).length;
               gap: ns(14),
             }}
           >
-            {/* ── 1. Ring ── */}
+            {/* 1. Ring */}
             <Animated.View
               entering={FadeIn.delay(100).duration(440)}
               style={{ alignItems: "center", paddingVertical: ns(6) }}
             >
               <MomentumRing
-   score={data.score}
-   prevScore={data.prevScore}
-   isDark={isDark}
-   t={t}
- />
+                score={data.score}
+                prevScore={data.prevScore}
+                isDark={isDark}
+                t={t}
+              />
             </Animated.View>
 
-            {/* ── 2. Stats + dots semaine ── */}
+            {/* 2. Stats + dots */}
             <Animated.View entering={FadeInDown.delay(200).duration(380)}>
               <LinearGradient
                 colors={cardBg}
@@ -1002,37 +920,24 @@ const markedCount = safeMarkedDaysBits.filter(Boolean).length;
                   gap: ns(18),
                 }}
               >
-                {/* Chips */}
-                <View
-                  style={{
-                    flexDirection: "row",
-                    justifyContent: "space-around",
-                    gap: ns(8),
-                  }}
-                >
+                <View style={{ flexDirection: "row", justifyContent: "space-around", gap: ns(8) }}>
                   <StatChip
                     icon="calendar-outline"
                     val={`${markedCount}`}
-                    label={t("weeklyReport.activeDays", {
-                      defaultValue: "jours actifs",
-                    })}
+                    label={t("weeklyReport.activeDays", { defaultValue: "jours actifs" })}
                     isDark={isDark}
                     delay={320}
                   />
                   <View
                     style={{
                       width: 1,
-                      backgroundColor: isDark
-                        ? "rgba(255,255,255,0.07)"
-                        : "rgba(0,0,0,0.06)",
+                      backgroundColor: isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.06)",
                     }}
                   />
                   <StatChip
                     icon="trophy-outline"
-                    val={`+${data.trophiesThisWeek}`}
-                    label={t("weeklyReport.trophies", {
-                      defaultValue: "trophées",
-                    })}
+                    val={`+${data.trophiesThisWeek ?? 0}`}
+                    label={t("weeklyReport.trophies", { defaultValue: "trophées" })}
                     isDark={isDark}
                     delay={380}
                     accent={GOLD}
@@ -1040,33 +945,25 @@ const markedCount = safeMarkedDaysBits.filter(Boolean).length;
                   <View
                     style={{
                       width: 1,
-                      backgroundColor: isDark
-                        ? "rgba(255,255,255,0.07)"
-                        : "rgba(0,0,0,0.06)",
+                      backgroundColor: isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.06)",
                     }}
                   />
                   <StatChip
                     icon="flame-outline"
                     val={`${data.bestStreak ?? 0}`}
-                    label={t("weeklyReport.streak", {
-                      defaultValue: "meilleur streak",
-                    })}
+                    label={t("weeklyReport.streak", { defaultValue: "meilleur streak" })}
                     isDark={isDark}
                     delay={440}
                   />
                 </View>
 
-                {/* Sépar */}
                 <View
                   style={{
                     height: 1,
-                    backgroundColor: isDark
-                      ? "rgba(255,255,255,0.06)"
-                      : wa(ORANGE, 0.08),
+                    backgroundColor: isDark ? "rgba(255,255,255,0.06)" : wa(ORANGE, 0.08),
                   }}
                 />
 
-                {/* Dots semaine */}
                 <View style={{ gap: ns(10) }}>
                   <Text
                     style={{
@@ -1078,32 +975,20 @@ const markedCount = safeMarkedDaysBits.filter(Boolean).length;
                       textTransform: "uppercase",
                     }}
                   >
-                    {t("weeklyReport.daysOfWeek", {
-                      defaultValue: "Cette semaine",
-                    })}
+                    {t("weeklyReport.daysOfWeek", { defaultValue: "Cette semaine" })}
                   </Text>
-                  <WeekDaysDots
-   markedDaysBits={safeMarkedDaysBits}
-   isDark={isDark}
-   t={t}
- />
+                  <WeekDaysDots markedDaysBits={safeMarkedDaysBits} isDark={isDark} t={t} />
                 </View>
               </LinearGradient>
             </Animated.View>
 
-            {/* ── 3. Diagnostic ── */}
+            {/* 3. Diagnostic */}
             <Animated.View entering={FadeInDown.delay(320).duration(360)}>
               <LinearGradient
                 colors={
                   isDark
-                    ? [
-                        "rgba(249,115,22,0.12)",
-                        "rgba(249,115,22,0.04)",
-                      ]
-                    : [
-                        "rgba(249,115,22,0.07)",
-                        "rgba(249,115,22,0.02)",
-                      ]
+                    ? ["rgba(249,115,22,0.12)", "rgba(249,115,22,0.04)"]
+                    : ["rgba(249,115,22,0.07)", "rgba(249,115,22,0.02)"]
                 }
                 style={{
                   borderRadius: ns(22),
@@ -1113,13 +998,7 @@ const markedCount = safeMarkedDaysBits.filter(Boolean).length;
                   gap: ns(14),
                 }}
               >
-                <View
-                  style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    gap: ns(12),
-                  }}
-                >
+                <View style={{ flexDirection: "row", alignItems: "center", gap: ns(12) }}>
                   <View
                     style={{
                       width: ns(40),
@@ -1142,9 +1021,7 @@ const markedCount = safeMarkedDaysBits.filter(Boolean).length;
                       flex: 1,
                     }}
                   >
-                    {t("weeklyReport.diagTitle", {
-                      defaultValue: "Ce que je vois",
-                    })}
+                    {t("weeklyReport.diagTitle", { defaultValue: "Ce que je vois" })}
                   </Text>
                 </View>
                 <Text
@@ -1160,13 +1037,12 @@ const markedCount = safeMarkedDaysBits.filter(Boolean).length;
               </LinearGradient>
             </Animated.View>
 
-            {/* ── 4. Défis de la semaine ── */}
+            {/* 4. Défis */}
             {safeChallenges.length > 0 && (
               <Animated.View
                 entering={FadeInDown.delay(400).duration(360)}
                 style={{ gap: ns(10) }}
               >
-                {/* Section header */}
                 <View
                   style={{
                     flexDirection: "row",
@@ -1192,9 +1068,7 @@ const markedCount = safeMarkedDaysBits.filter(Boolean).length;
                       letterSpacing: 0.8,
                     }}
                   >
-                    {t("weeklyReport.challengesSection", {
-                      defaultValue: "Tes défis",
-                    })}
+                    {t("weeklyReport.challengesSection", { defaultValue: "Tes défis" })}
                   </Text>
                 </View>
 
@@ -1210,7 +1084,7 @@ const markedCount = safeMarkedDaysBits.filter(Boolean).length;
               </Animated.View>
             )}
 
-            {/* ── 5. Objectif semaine ── */}
+            {/* 5. Objectif */}
             <Animated.View entering={FadeInDown.delay(500).duration(360)}>
               <LinearGradient
                 colors={cardBg}
@@ -1222,14 +1096,7 @@ const markedCount = safeMarkedDaysBits.filter(Boolean).length;
                   gap: ns(16),
                 }}
               >
-                {/* Header */}
-                <View
-                  style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    gap: ns(12),
-                  }}
-                >
+                <View style={{ flexDirection: "row", alignItems: "center", gap: ns(12) }}>
                   <View
                     style={{
                       width: ns(40),
@@ -1252,9 +1119,7 @@ const markedCount = safeMarkedDaysBits.filter(Boolean).length;
                         color: textPri,
                       }}
                     >
-                      {t("weeklyReport.goalTitle", {
-                        defaultValue: "Objectif cette semaine",
-                      })}
+                      {t("weeklyReport.goalTitle", { defaultValue: "Objectif cette semaine" })}
                     </Text>
                     <Text
                       style={{
@@ -1271,7 +1136,6 @@ const markedCount = safeMarkedDaysBits.filter(Boolean).length;
                   </View>
                 </View>
 
-                {/* Texte objectif */}
                 <Text
                   style={{
                     fontFamily: "Comfortaa_400Regular",
@@ -1280,23 +1144,15 @@ const markedCount = safeMarkedDaysBits.filter(Boolean).length;
                     color: textBody,
                   }}
                 >
-                  {data.weekGoal}
+                  {safeWeekGoal}
                 </Text>
 
-                {/* Barre de progression */}
-                <GoalBar
-                  current={markedCount}
-                  target={data.weekGoalTarget ?? 7}
-                  isDark={isDark}
-                />
+                <GoalBar current={markedCount} target={safeTarget} isDark={isDark} />
 
-                {/* CTA */}
                 <Pressable
                   onPress={async () => {
                     try {
-                      await Haptics.impactAsync(
-                        Haptics.ImpactFeedbackStyle.Medium
-                      );
+                      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                     } catch {}
                     onGoalAccept();
                   }}
@@ -1322,10 +1178,7 @@ const markedCount = safeMarkedDaysBits.filter(Boolean).length;
                     }}
                   >
                     <LinearGradient
-                      colors={[
-                        "rgba(255,255,255,0.22)",
-                        "rgba(255,255,255,0.00)",
-                      ]}
+                      colors={["rgba(255,255,255,0.22)", "rgba(255,255,255,0.00)"]}
                       start={{ x: 0, y: 0 }}
                       end={{ x: 0, y: 1 }}
                       style={{
@@ -1338,11 +1191,7 @@ const markedCount = safeMarkedDaysBits.filter(Boolean).length;
                       }}
                       pointerEvents="none"
                     />
-                    <Ionicons
-                      name="checkmark-circle"
-                      size={ns(22)}
-                      color="#FFF"
-                    />
+                    <Ionicons name="checkmark-circle" size={ns(22)} color="#FFF" />
                     <Text
                       style={{
                         fontFamily: "Comfortaa_700Bold",
@@ -1350,22 +1199,20 @@ const markedCount = safeMarkedDaysBits.filter(Boolean).length;
                         color: "#FFFFFF",
                       }}
                     >
-                      {t("weeklyReport.goalAccept", {
-                        defaultValue: "Je relève le défi 💪",
-                      })}
+                      {t("weeklyReport.goalAccept", { defaultValue: "Je relève le défi 💪" })}
                     </Text>
                   </LinearGradient>
                 </Pressable>
               </LinearGradient>
             </Animated.View>
 
-            {/* ── Fermer ── */}
+            {/* Fermer */}
             <Pressable
               onPress={onClose}
               style={({ pressed }) => ({
                 alignItems: "center",
                 paddingVertical: ns(8),
-                opacity: pressed ? 0.50 : 1,
+                opacity: pressed ? 0.5 : 1,
               })}
             >
               <Text

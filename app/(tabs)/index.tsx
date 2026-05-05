@@ -2072,12 +2072,16 @@ useEffect(() => {
 
         return {
           id: snap.id,
-          title: data?.chatId
-            ? t(`challenges.${data.chatId}.title`)
-            : t("mysteriousChallenge"),
-          description: data?.chatId
-            ? t(`challenges.${data.chatId}.description`)
-            : t("noDescriptionAvailable"),
+         title: data?.title
+  ? data.title
+  : data?.chatId
+  ? t(`challenges.${data.chatId}.title`)
+  : t("mysteriousChallenge"),
+          description: data?.description
+  ? data.description
+  : data?.chatId
+  ? t(`challenges.${data.chatId}.description`)
+  : t("noDescriptionAvailable"),
           category: data?.category
             ? t(`categories.${data.category}`)
             : t("miscellaneous"),
