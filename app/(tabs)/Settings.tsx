@@ -707,7 +707,7 @@ export default function Settings() {
   const adminUID = "GiN2yTfA7NWISeb4QjXmDPq5TgK2";
 
   return (
-    <GlobalLayout key={safeLanguage}>
+    <GlobalLayout>
       <StatusBar style={isDarkMode ? "light" : "dark"} translucent />
       <CustomHeader title={t("settings")} />
       <LinearGradient

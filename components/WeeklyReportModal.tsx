@@ -1047,7 +1047,7 @@ const markedCount = safeMarkedDaysBits.filter(Boolean).length;
                   />
                   <StatChip
                     icon="flame-outline"
-                    val={`${data.bestStreak}`}
+                    val={`${data.bestStreak ?? 0}`}
                     label={t("weeklyReport.streak", {
                       defaultValue: "meilleur streak",
                     })}
@@ -1286,7 +1286,7 @@ const markedCount = safeMarkedDaysBits.filter(Boolean).length;
                 {/* Barre de progression */}
                 <GoalBar
                   current={markedCount}
-                  target={data.weekGoalTarget}
+                  target={data.weekGoalTarget ?? 7}
                   isDark={isDark}
                 />
 
