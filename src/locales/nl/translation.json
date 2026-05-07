@@ -1691,12 +1691,9 @@
       "national": "Spelers uit je land bekijken",
       "global": "Alle spelers bekijken"
     },
-    "tab": {
-      "region": "Regionaal",
-      "national": "Nationaal",
-      "global": "Globaal",
-      "weekly": "Deze week"
-    },
+    "tab": { "global": "Globaal", "national": "Nationaal", "regional": "Regionaal", "weekly": "Deze week" },
+  "weeklyInfo": "Deze week verdiende trofeeën · Reset elke maandag",
+  "weeklyEmpty": "Nog geen data deze week.\nKom maandag terug na een actieve week!",
     "listLabel": "Lijst van gerangschikte spelers",
     "noPlayers": "Geen spelers beschikbaar voor dit klassement."
   },

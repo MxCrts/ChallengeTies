@@ -1703,12 +1703,9 @@
       "national": "あなたの国のプレイヤーを見る",
       "global": "全プレイヤーを見る"
     },
-    "tab": {
-      "region": "地域",
-      "national": "国",
-      "global": "世界",
-      "weekly": "今週"
-    },
+    "tab": { "global": "グローバル", "national": "ナショナル", "regional": "リージョナル", "weekly": "今週" },
+  "weeklyInfo": "今週獲得したトロフィー · 毎週月曜日にリセット",
+  "weeklyEmpty": "今週はまだデータがありません。\nアクティブな週の後、月曜日に確認してください！",
     "listLabel": "ランキングプレイヤー一覧",
     "noPlayers": "このランキングにプレイヤーがいません。"
   },

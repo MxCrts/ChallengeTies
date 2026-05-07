@@ -1902,12 +1902,9 @@
       "national": "Nach Land filtern",
       "global": "Global"
     },
-    "tab": {
-      "region": "Region",
-      "national": "National",
-      "global": "Global",
-      "weekly": "Diese Woche"
-    },
+    "tab": { "global": "Global", "national": "National", "regional": "Regional", "weekly": "Diese Woche" },
+  "weeklyInfo": "Diese Woche verdiente Trophäen · Reset jeden Montag",
+  "weeklyEmpty": "Noch keine Daten diese Woche.\nKomm Montag nach einer aktiven Woche wieder!",
     "listLabel": "Liste der Rangspieler",
     "noPlayers": "Keine Spieler für diese Bestenliste verfügbar."
   },

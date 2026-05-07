@@ -530,7 +530,9 @@ const toggleBanner = useCallback(() => {
     }
   }, [completedCount]);
 
-  useEffect(() => {
+  const streakQuestFiredRef = React.useRef(false);
+
+useEffect(() => {
   if (!state) return;
   if (streakCurrent < 3) return;
 
@@ -539,6 +541,8 @@ const toggleBanner = useCallback(() => {
   )?.completed;
 
   if (streakQuestDone) return;
+  if (streakQuestFiredRef.current) return; // ✅ anti boucle
+  streakQuestFiredRef.current = true;
 
   complete("maintain_3day_streak").catch(() => {});
 }, [state, streakCurrent, complete]);

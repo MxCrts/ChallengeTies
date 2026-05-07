@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useMemo } from "react";
+import React, { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import {
   View,
   Text,
@@ -8,8 +8,8 @@ import {
   Dimensions,
   TouchableOpacity,
   ScrollView,
-  StatusBar,
   RefreshControl,
+  Platform,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
@@ -27,935 +27,790 @@ import {
 import { db, auth } from "@/constants/firebase-config";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import Animated, { FadeInUp, ZoomIn } from "react-native-reanimated";
+import Animated, {
+  FadeInUp,
+  FadeIn,
+  ZoomIn,
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  withRepeat,
+  withSequence,
+  Easing,
+} from "react-native-reanimated";
 import { useTheme } from "../context/ThemeContext";
 import { Theme } from "../theme/designSystem";
 import designSystem from "../theme/designSystem";
 import CustomHeader from "@/components/CustomHeader";
 import { useTranslation } from "react-i18next";
 import { BlurView } from "expo-blur";
-import PioneerBadge from "@/components/PioneerBadge";
 import { useShareCard } from "@/hooks/useShareCard";
 import { RankShareCard } from "@/components/ShareCards";
 import * as Haptics from "expo-haptics";
-import { I18nManager } from "react-native";
+import { StatusBar } from "expo-status-bar";
 
-const SPACING = 15;
+const SPACING = 16;
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
-const normalizeFont = (size: number) => {
-  const scale = Math.min(Math.max(SCREEN_WIDTH / 375, 0.7), 1.8);
+const ns = (size: number) => {
+  const scale = Math.min(Math.max(SCREEN_WIDTH / 375, 0.72), 1.7);
   return Math.round(size * scale);
 };
-const normalizeSize = (size: number) => {
-  const scale = Math.min(Math.max(SCREEN_WIDTH / 375, 0.7), 1.8);
-  return Math.round(size * scale);
-};
+
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 interface Player {
   id: string;
-  username?: string;
+  username: string;
   trophies: number;
   profileImage?: string;
   country?: string;
   region?: string;
   rank?: number;
   isPioneer?: boolean;
+  weeklyTrophies?: number; // trophées gagnés cette semaine (weekly tab)
 }
 
-const topN = (arr: Player[], n: number) => arr.slice(0, n);
+type Tab = "global" | "national" | "regional" | "weekly";
 
-// ─── Config visuelle par rang ──────────────────────────────────────────────
-const SLOT_CONFIG = {
+// ─── Podium config ────────────────────────────────────────────────────────────
+
+const PODIUM = {
   1: {
-    pedestalH:    (s: typeof normalizeSize) => s(72),
-    avatarSize:   (s: typeof normalizeSize) => s(88),
-    ringPad:      (s: typeof normalizeSize) => s(5),
-    nameSize:     (f: typeof normalizeFont) => f(15.5),
-    scoreSize:    (f: typeof normalizeFont) => f(12.5),
-    medal:        "👑",
-    ringColors:   ["rgba(255,215,0,1)", "rgba(255,180,0,0.75)", "rgba(255,245,160,0.5)"] as const,
-    glowColor:    "rgba(255,215,0,0.22)",
-    pedestalTop:  "rgba(255,215,0,0.22)",
-    pedestalMid:  "rgba(255,165,0,0.08)",
-    medalSize:    (s: typeof normalizeSize) => s(32),
+    h: ns(80), avatarSize: ns(88), pad: ns(5),
+    medal: "👑",
+    ring: ["#FFD700", "#FFA500", "#FFE066"] as const,
+    glow: "rgba(255,215,0,0.18)",
+    label: ns(15.5), score: ns(12.5), medalSize: ns(30),
   },
   2: {
-    pedestalH:    (s: typeof normalizeSize) => s(50),
-    avatarSize:   (s: typeof normalizeSize) => s(72),
-    ringPad:      (s: typeof normalizeSize) => s(4),
-    nameSize:     (f: typeof normalizeFont) => f(14),
-    scoreSize:    (f: typeof normalizeFont) => f(12),
-    medal:        "🥈",
-    ringColors:   ["rgba(225,228,240,0.92)", "rgba(158,165,185,0.55)"] as const,
-    glowColor:    "transparent",
-    pedestalTop:  "rgba(200,210,230,0.16)",
-    pedestalMid:  "rgba(160,165,185,0.05)",
-    medalSize:    (s: typeof normalizeSize) => s(26),
+    h: ns(56), avatarSize: ns(72), pad: ns(4),
+    medal: "🥈",
+    ring: ["rgba(200,210,230,0.9)", "rgba(150,160,180,0.5)"] as const,
+    glow: "transparent",
+    label: ns(14), score: ns(12), medalSize: ns(24),
   },
   3: {
-    pedestalH:    (s: typeof normalizeSize) => s(38),
-    avatarSize:   (s: typeof normalizeSize) => s(66),
-    ringPad:      (s: typeof normalizeSize) => s(4),
-    nameSize:     (f: typeof normalizeFont) => f(14),
-    scoreSize:    (f: typeof normalizeFont) => f(12),
-    medal:        "🥉",
-    ringColors:   ["rgba(205,127,50,0.92)", "rgba(130,75,35,0.50)"] as const,
-    glowColor:    "transparent",
-    pedestalTop:  "rgba(205,127,50,0.16)",
-    pedestalMid:  "rgba(130,75,35,0.05)",
-    medalSize:    (s: typeof normalizeSize) => s(26),
+    h: ns(42), avatarSize: ns(66), pad: ns(4),
+    medal: "🥉",
+    ring: ["rgba(195,115,45,0.9)", "rgba(120,70,30,0.5)"] as const,
+    glow: "transparent",
+    label: ns(14), score: ns(12), medalSize: ns(24),
   },
 } as const;
 
+// ─── Composant principal ──────────────────────────────────────────────────────
+
 export default function LeaderboardScreen() {
   const { t, i18n } = useTranslation();
-  const [players, setPlayers] = useState<Player[]>([]);
-  const [filteredPlayers, setFilteredPlayers] = useState<Player[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [currentUser, setCurrentUser] = useState<Player | null>(null);
-  const [selectedTab, setSelectedTab] = useState<"region" | "national" | "global" | "weekly">("global");
-  const [weeklyPlayers, setWeeklyPlayers] = useState<Player[]>([]);
-  const [locationDisabledMessage, setLocationDisabledMessage] = useState<string | null>(null);
-
   const router = useRouter();
   const { theme } = useTheme();
-  const isDarkMode = theme === "dark";
-  const currentTheme: Theme = isDarkMode ? designSystem.darkTheme : designSystem.lightTheme;
+  const isDark = theme === "dark";
+  const currentTheme: Theme = isDark ? designSystem.darkTheme : designSystem.lightTheme;
 
-  const primaryText   = isDarkMode ? "#FFFFFF" : "#0B0B10";
-  const secondaryText = isDarkMode ? currentTheme.colors.textSecondary : "rgba(0,0,0,0.55)";
-  const cardBg        = isDarkMode ? "rgba(255,255,255,0.055)" : "rgba(255,255,255,0.78)";
-  const cardBgMe      = isDarkMode ? "rgba(255,255,255,0.09)"  : "rgba(255,255,255,0.88)";
-  const rowStroke     = isDarkMode ? "rgba(255,255,255,0.10)"  : "rgba(0,0,0,0.08)";
-  const rowStrokeMe   = isDarkMode ? "rgba(255,255,255,0.14)"  : "rgba(0,0,0,0.10)";
-  const podiumScoreColor = isDarkMode ? "rgba(255,255,255,0.82)" : "rgba(0,0,0,0.60)";
-
-  const meRingGrad: readonly [ColorValue, ColorValue, ...ColorValue[]] = isDarkMode
-    ? ["rgba(255,255,255,0.34)", "rgba(255,255,255,0.08)", "rgba(255,255,255,0.22)"]
-    : ["rgba(0,0,0,0.18)", "rgba(0,0,0,0.06)", "rgba(0,0,0,0.14)"];
-  const meHalo = isDarkMode ? "rgba(255,255,255,0.10)" : "rgba(0,0,0,0.06)";
+  // ── State ──────────────────────────────────────────────────────────────────
+  const [allPlayers, setAllPlayers] = useState<Player[]>([]);
+  const [weeklyPlayers, setWeeklyPlayers] = useState<Player[]>([]);
+  const [currentUser, setCurrentUser] = useState<Player | null>(null);
+  const [tab, setTab] = useState<Tab>("global");
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [locationMsg, setLocationMsg] = useState<string | null>(null);
 
   const { ref: rankShareRef, share: shareRankCard } = useShareCard();
   const [rankSharePayload, setRankSharePayload] = useState<{
     username: string; rank: number | string; trophies?: number; avatarUri?: string | null;
   } | null>(null);
 
-  // ─── Cache ────────────────────────────────────────────────────────────────
-  const cacheLeaderboard = useCallback(async (data: Player[]) => {
-    try { await AsyncStorage.setItem("leaderboardCache", JSON.stringify(data)); } catch {}
-  }, []);
+  // ── Colors ─────────────────────────────────────────────────────────────────
+  const C = useMemo(() => ({
+    text:        isDark ? "#F0F0F5" : "#0B0B10",
+    textMuted:   isDark ? "rgba(255,255,255,0.50)" : "rgba(0,0,0,0.45)",
+    cardBg:      isDark ? "rgba(255,255,255,0.055)" : "rgba(255,255,255,0.82)",
+    cardBgMe:    isDark ? "rgba(255,255,255,0.10)"  : "rgba(255,255,255,0.96)",
+    stroke:      isDark ? "rgba(255,255,255,0.09)"  : "rgba(0,0,0,0.07)",
+    strokeMe:    isDark ? "rgba(255,255,255,0.16)"  : "rgba(0,0,0,0.10)",
+    orange:      "#F97316",
+    orangeLight: isDark ? "rgba(249,115,22,0.14)" : "rgba(249,115,22,0.08)",
+    orangeBorder:isDark ? "rgba(249,115,22,0.35)" : "rgba(249,115,22,0.22)",
+    podiumScore: isDark ? "rgba(255,255,255,0.72)" : "rgba(0,0,0,0.55)",
+  }), [isDark]);
 
-  const getCachedLeaderboard = useCallback(async () => {
+  // ── Fetch ──────────────────────────────────────────────────────────────────
+  const fetchData = useCallback(async () => {
     try {
-      const cached = await AsyncStorage.getItem("leaderboardCache");
-      return cached ? JSON.parse(cached) : null;
-    } catch { return null; }
-  }, []);
+      // Cache
+      const cached = await AsyncStorage.getItem("lb_cache_v2");
+      if (cached) setAllPlayers(JSON.parse(cached));
 
-  // ─── Fetch ────────────────────────────────────────────────────────────────
-  const fetchLeaderboard = useCallback(async () => {
-    try {
-      !refreshing && setLoading(true);
-      const cached = await getCachedLeaderboard();
-      if (cached) setPlayers(cached);
-
-      const q = query(collection(db, "users"), orderBy("trophies", "desc"), limit(20));
-      const snapshot = await getDocs(q);
-      const fetched: Player[] = snapshot.docs.map((d) => ({
+      // Global leaderboard
+      const gq = query(collection(db, "users"), orderBy("trophies", "desc"), limit(20));
+      const gSnap = await getDocs(gq);
+      const global: Player[] = gSnap.docs.map((d) => ({
         id: d.id,
-        username:     d.data().username?.toString?.()     || t("leaderboard.unknown", { defaultValue: "Unknown" }),
-        trophies:     d.data().trophies || 0,
-        profileImage: d.data().profileImage?.toString?.() || null,
-        country:      d.data().country?.toString?.()      || t("leaderboard.unknown", { defaultValue: "Unknown" }),
-        region:       d.data().region?.toString?.()       || t("leaderboard.unknown", { defaultValue: "Unknown" }),
-        isPioneer:    !!d.data().isPioneer,
+        username: d.data().username ?? "?",
+        trophies: d.data().trophies ?? 0,
+        profileImage: d.data().profileImage ?? undefined,
+        country: d.data().country ?? "",
+        region: d.data().region ?? "",
+        isPioneer: !!d.data().isPioneer,
       }));
-      setPlayers(fetched);
-      cacheLeaderboard(fetched);
+      setAllPlayers(global);
+      AsyncStorage.setItem("lb_cache_v2", JSON.stringify(global)).catch(() => {});
 
-      // ── Leaderboard hebdomadaire ──────────────────────────────────────────
-      try {
-        const wq = query(collection(db, "leaderboard_weekly"), orderBy("trophies", "desc"), limit(20));
-        const wsnap = await getDocs(wq);
-        const wfetched: Player[] = wsnap.docs.map((d) => ({
-          id: d.id,
-          username:     d.data().username?.toString?.()     || t("leaderboard.unknown", { defaultValue: "Unknown" }),
-          trophies:     d.data().trophies || 0,
-          profileImage: d.data().profileImage?.toString?.() || null,
-          country:      d.data().country?.toString?.()      || "",
-          region:       d.data().region?.toString?.()       || "",
-          isPioneer:    !!d.data().isPioneer,
-        }));
-        setWeeklyPlayers(wfetched);
-      } catch {}
+      // Weekly leaderboard
+      const wq = query(collection(db, "leaderboard_weekly"), orderBy("trophies", "desc"), limit(20));
+      const wSnap = await getDocs(wq);
+      const weekly: Player[] = wSnap.docs.map((d) => ({
+        id: d.id,
+        username: d.data().username ?? "?",
+        trophies: d.data().trophies ?? 0,         // trophées gagnés cette semaine
+        profileImage: d.data().profileImage ?? undefined,
+        country: d.data().country ?? "",
+        region: d.data().region ?? "",
+        isPioneer: !!d.data().isPioneer,
+        weeklyTrophies: d.data().trophies ?? 0,
+      }));
+      setWeeklyPlayers(weekly);
 
+      // Current user
       const uid = auth.currentUser?.uid;
       if (uid) {
-        const userSnap = await getDoc(doc(db, "users", uid));
-        if (userSnap.exists()) {
-          const data = userSnap.data();
-          const found = fetched.find((p) => p.id === uid) || {
+        const uSnap = await getDoc(doc(db, "users", uid));
+        if (uSnap.exists()) {
+          const d = uSnap.data();
+          const found = global.find((p) => p.id === uid) ?? {
             id: uid,
-            username:     data.username?.toString?.()     || t("leaderboard.unknown", { defaultValue: "Unknown" }),
-            trophies:     data.trophies || 0,
-            profileImage: data.profileImage?.toString?.() || null,
-            country:      data.country?.toString?.()      || t("leaderboard.unknown", { defaultValue: "Unknown" }),
-            region:       data.region?.toString?.()       || t("leaderboard.unknown", { defaultValue: "Unknown" }),
-            isPioneer:    !!data.isPioneer,
+            username: d.username ?? "?",
+            trophies: d.trophies ?? 0,
+            profileImage: d.profileImage ?? undefined,
+            country: d.country ?? "",
+            region: d.region ?? "",
+            isPioneer: !!d.isPioneer,
           };
           setCurrentUser(found);
-          setLocationDisabledMessage(data.locationEnabled ? null : t("leaderboard.locationDisabled"));
-        } else {
-          setCurrentUser(null);
-          setLocationDisabledMessage(t("leaderboard.userNotFound"));
+          if (!d.locationEnabled) setLocationMsg(t("leaderboard.locationDisabled"));
         }
       }
     } catch {
-      setLocationDisabledMessage(t("leaderboard.errorFetch"));
+      setLocationMsg(t("leaderboard.errorFetch"));
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [t, cacheLeaderboard, getCachedLeaderboard, refreshing]);
+  }, [t]);
 
-  useEffect(() => { fetchLeaderboard(); }, [fetchLeaderboard]);
+  useEffect(() => { fetchData(); }, [fetchData]);
+  const onRefresh = () => { setRefreshing(true); fetchData(); };
 
-  const onRefresh = useCallback(() => { setRefreshing(true); fetchLeaderboard(); }, [fetchLeaderboard]);
-
-  // ─── Share ────────────────────────────────────────────────────────────────
-  const shareMyRankCard = useCallback(async () => {
-    if (!currentUser) return;
-    const basis = selectedTab === "global" ? players : filteredPlayers;
-    const myIndex = basis.findIndex((p) => p.id === currentUser.id);
-    const myRank = myIndex >= 0 ? myIndex + 1 : "—";
-    try { await Haptics.selectionAsync(); } catch {}
-    setRankSharePayload({ username: currentUser.username ?? "me", rank: myRank, trophies: currentUser.trophies ?? 0, avatarUri: currentUser.profileImage ?? null });
-    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-    await shareRankCard(`ct-rank-${currentUser.id}-${Date.now()}.png`, t("leaderboard.shareDialogTitle", { defaultValue: "Partager mon rang" }));
-    setRankSharePayload(null);
-  }, [currentUser, players, filteredPlayers, selectedTab, shareRankCard, t]);
-
-  // ─── Filtrage ─────────────────────────────────────────────────────────────
-  useEffect(() => {
-    if (!currentUser) { setFilteredPlayers([]); return; }
-    const hasText = (v?: string) => typeof v === "string" && v.trim().length > 0;
-
-    // ── Onglet weekly : on utilise directement weeklyPlayers ────────────────
-    if (selectedTab === "weekly") {
-      setFilteredPlayers(weeklyPlayers.slice(0, 20));
-      return;
-    }
-
-    let base = players;
-    if (selectedTab === "region") {
-  base = players.filter((p) => 
-    hasText(p.region) && 
-    hasText(currentUser.region) && 
-    p.region.toLowerCase().trim() === currentUser.region.toLowerCase().trim()
-  );
-} else if (selectedTab === "national") {
-  base = players.filter((p) => 
-    hasText(p.country) && 
-    hasText(currentUser.country) && 
-    p.country.toLowerCase().trim() === currentUser.country.toLowerCase().trim()
-  );
-}
-    setFilteredPlayers(base.slice().sort((a, b) => b.trophies - a.trophies).slice(0, 20));
-  }, [selectedTab, players, currentUser]);
-
-  const podium = useMemo(() => topN(filteredPlayers, 3), [filteredPlayers]);
-
-  // ─── ✅ NOUVEAU PODIUM CINÉMATIQUE ──────────────────────────────────────
-  const renderTopThree = useCallback(() => {
-    if (podium.length < 3) {
-      return (
-        <Text
-          style={[styles.noPlayersText, { color: currentTheme.colors.textSecondary }, { textAlign: "center" }]}
-          numberOfLines={3} adjustsFontSizeToFit
-        >
-          {t("leaderboard.notEnough")}
-        </Text>
+  // ── Filtered players ────────────────────────────────────────────────────────
+  const displayPlayers = useMemo((): Player[] => {
+    if (tab === "weekly") return weeklyPlayers;
+    let base = allPlayers;
+    if (tab === "national" && currentUser?.country) {
+      base = allPlayers.filter(
+        (p) => p.country?.toLowerCase().trim() === currentUser.country?.toLowerCase().trim()
+      );
+    } else if (tab === "regional" && currentUser?.region) {
+      base = allPlayers.filter(
+        (p) => p.region?.toLowerCase().trim() === currentUser.region?.toLowerCase().trim()
       );
     }
+    return base.slice().sort((a, b) => b.trophies - a.trophies).slice(0, 20);
+  }, [tab, allPlayers, weeklyPlayers, currentUser]);
 
-    const [first, second, third] = podium;
-    const slots = [
-      { player: second, rank: 2 as const, delay: 100 },
-      { player: first,  rank: 1 as const, delay: 0   },
-      { player: third,  rank: 3 as const, delay: 180 },
-    ];
+  const podium = useMemo(() => displayPlayers.slice(0, 3), [displayPlayers]);
+  const listRows = useMemo(() => {
+    const rows = displayPlayers.slice(3, 20);
+    if (currentUser) {
+      const idx = displayPlayers.findIndex((p) => p.id === currentUser.id);
+      if (idx > 19) rows.push({ ...currentUser, rank: idx + 1 });
+    }
+    return rows;
+  }, [displayPlayers, currentUser]);
 
-    return (
-      <Animated.View
-  key={podium.map(p => p.id).join("-")}  // ✅ force re-render complet quand podium change
-  entering={FadeInUp.delay(80).duration(360)}
-  style={styles.podiumScene}
-      >
-        {/* Sol */}
-        <View
-          style={[
-            styles.podiumFloor,
-            { backgroundColor: isDarkMode ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)" },
-          ]}
-        />
+  // ── Share ───────────────────────────────────────────────────────────────────
+  const shareMyRank = useCallback(async () => {
+    if (!currentUser) return;
+    const idx = displayPlayers.findIndex((p) => p.id === currentUser.id);
+    const rank = idx >= 0 ? idx + 1 : "—";
+    try { await Haptics.selectionAsync(); } catch {}
+    setRankSharePayload({
+      username: currentUser.username,
+      rank,
+      trophies: currentUser.trophies,
+      avatarUri: currentUser.profileImage ?? null,
+    });
+    await new Promise<void>((r) => requestAnimationFrame(() => r()));
+    await shareRankCard(`ct-rank-${currentUser.id}-${Date.now()}.png`, t("leaderboard.shareDialogTitle", { defaultValue: "Mon rang" }));
+    setRankSharePayload(null);
+  }, [currentUser, displayPlayers, shareRankCard, t]);
 
-        {slots.map(({ player, rank, delay }) => {
-          const cfg = SLOT_CONFIG[rank];
-          const isFirst = rank === 1;
-          const avatarSize  = cfg.avatarSize(normalizeSize);
-          const ringPad     = cfg.ringPad(normalizeSize);
-          const ringSize    = avatarSize + ringPad * 2;
-          const pedestalH   = cfg.pedestalH(normalizeSize);
-          const medalSize   = cfg.medalSize(normalizeSize);
-
-          return (
-            <Animated.View
-              key={`${rank}-${player.id}`}
-              entering={ZoomIn.delay(delay).duration(400)}
-              style={[styles.podiumSlot, { zIndex: isFirst ? 3 : rank === 2 ? 2 : 1 }]}
-            >
-
-              {/* ── Zone avatar ─────────────────────────────────── */}
-              <View style={[styles.podiumAvatarZone, { marginBottom: normalizeSize(isFirst ? 10 : 8) }]}>
-
-                {/* Halo doré (1er uniquement) */}
-                {isFirst && (
-                  <View
-                    pointerEvents="none"
-                    style={[
-                      styles.podiumGoldHalo,
-                      {
-                        width:  ringSize + normalizeSize(24),
-                        height: ringSize + normalizeSize(24),
-                        borderRadius: (ringSize + normalizeSize(24)) / 2,
-                        backgroundColor: cfg.glowColor,
-                      },
-                    ]}
-                  />
-                )}
-
-                {/* Ring gradient */}
-                <LinearGradient
-                  colors={cfg.ringColors}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={{
-                    width: ringSize,
-                    height: ringSize,
-                    borderRadius: ringSize / 2,
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <Image
-                    source={
-                      player.profileImage
-                        ? { uri: player.profileImage }
-                        : require("../assets/images/default-profile.webp")
-                    }
-                    defaultSource={require("../assets/images/default-profile.webp")}
-                    style={{
-                      width:        avatarSize,
-                      height:       avatarSize,
-                      borderRadius: avatarSize / 2,
-                      borderWidth:  isFirst ? normalizeSize(2.5) : normalizeSize(2),
-                      borderColor:  isDarkMode ? "rgba(255,255,255,0.14)" : "rgba(255,255,255,0.85)",
-                    }}
-                    accessibilityRole="image"
-                    accessibilityLabel={t("leaderboard.profileOf", { name: player.username })}
-                  />
-                </LinearGradient>
-
-                {/* Médaille chip */}
-                <View
-                  style={[
-                    styles.podiumMedalChip,
-                    {
-                      width:        medalSize,
-                      height:       medalSize,
-                      borderRadius: medalSize / 2,
-                      bottom: -normalizeSize(isFirst ? 5 : 4),
-                      right:  -normalizeSize(isFirst ? 3 : 2),
-                      backgroundColor: isDarkMode ? "rgba(12,14,22,0.88)" : "rgba(255,255,255,0.92)",
-                      borderColor:     isDarkMode ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.08)",
-                    },
-                  ]}
-                >
-                  <Text style={{ fontSize: isFirst ? normalizeFont(17) : normalizeFont(13), includeFontPadding: false }}>
-                    {cfg.medal}
-                  </Text>
-                </View>
-              </View>
-
-              {/* ── Nom ─────────────────────────────────────────── */}
-              <Text
-                style={[
-                  styles.podiumSlotName,
-                  {
-                    fontSize: cfg.nameSize(normalizeFont),
-                    color: isDarkMode
-                      ? isFirst ? "#FFFFFF" : "rgba(255,255,255,0.90)"
-                      : "#0B0B10",
-                  },
-                ]}
-                numberOfLines={1}
-                adjustsFontSizeToFit
-              >
-                {player.username}
-              </Text>
-
-              {/* ── Score ───────────────────────────────────────── */}
-              <View style={styles.podiumSlotScoreRow}>
-                <Text style={{ fontSize: normalizeFont(isFirst ? 12 : 11), includeFontPadding: false, marginRight: normalizeSize(3) }}>
-                  🏆
-                </Text>
-                <Text
-                  style={[
-                    styles.podiumSlotScore,
-                    { fontSize: cfg.scoreSize(normalizeFont), color: podiumScoreColor },
-                  ]}
-                  numberOfLines={1}
-                  adjustsFontSizeToFit
-                >
-                  {Number(player.trophies || 0).toLocaleString(i18n.language)}
-                </Text>
-              </View>
-
-              {/* ── Socle ───────────────────────────────────────── */}
-              <View
-                style={[
-                  styles.podiumPedestal,
-                  {
-                    height: pedestalH,
-                    borderColor: isDarkMode ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.07)",
-                  },
-                ]}
-              >
-                {/* Fond gradient du socle */}
-                <LinearGradient
-                  colors={[cfg.pedestalTop, cfg.pedestalMid, "transparent"]}
-                  start={{ x: 0.5, y: 0 }}
-                  end={{ x: 0.5, y: 1 }}
-                  style={[
-                    StyleSheet.absoluteFill,
-                    {
-                      backgroundColor: isDarkMode ? "rgba(255,255,255,0.04)" : "rgba(255,255,255,0.60)",
-                      borderTopLeftRadius: normalizeSize(8),
-                      borderTopRightRadius: normalizeSize(8),
-                    },
-                  ]}
-                />
-                {/* Numéro dans le socle */}
-                <Text
-                  style={[
-                    styles.podiumPedestalRank,
-                    {
-                      fontSize: isFirst ? normalizeFont(22) : normalizeFont(17),
-                      color: isDarkMode ? "rgba(255,255,255,0.22)" : "rgba(0,0,0,0.18)",
-                    },
-                  ]}
-                >
-                  {rank}
-                </Text>
-              </View>
-
-            </Animated.View>
-          );
-        })}
-      </Animated.View>
-    );
-  }, [podium, currentTheme, t, isDarkMode, i18n.language, podiumScoreColor]);
-
-  // ─── PlayerItem (inchangé) ────────────────────────────────────────────────
-  const PlayerItem = useMemo(
-    () =>
-      React.memo(({ item, index }: { item: Player; index: number }) => {
-        const rank = item.rank ?? index + 4;
-        return (
-          <Animated.View
-            entering={FadeInUp.delay(220 + index * 40)}
-            style={[
-              styles.row,
-              {
-                backgroundColor: item.id === currentUser?.id ? cardBgMe : cardBg,
-                borderColor:     item.id === currentUser?.id ? rowStrokeMe : rowStroke,
-                borderWidth: StyleSheet.hairlineWidth,
-                shadowOpacity: 0,
-                elevation: 0,
-              },
-            ]}
-          >
-            <View pointerEvents="none" style={[styles.rowInnerHighlight, { opacity: isDarkMode ? 0.10 : 0.18 }]} />
-
-            <View style={styles.leftSection}>
-              <View style={styles.avatarWrap}>
-                <Image
-                  source={item.profileImage ? { uri: item.profileImage } : require("../assets/images/default-profile.webp")}
-                  defaultSource={require("../assets/images/default-profile.webp")}
-                  style={[styles.avatar, item.id === currentUser?.id && styles.avatarMe]}
-                  accessibilityRole="image"
-                  accessibilityLabel={(item.isPioneer ? "Pioneer · " : "") + t("leaderboard.profileOf", { name: item.username })}
-                />
-              </View>
-              <View style={styles.playerInfo}>
-                <Text
-                  style={[styles.name, { color: primaryText }, { writingDirection: I18nManager.isRTL ? "rtl" : "ltr", textAlign: I18nManager.isRTL ? "right" : "left" }]}
-                  numberOfLines={1} adjustsFontSizeToFit
-                >
-                  {item.username}
-                </Text>
-                <Text style={[styles.handle, { color: secondaryText }, { writingDirection: "ltr" }]} numberOfLines={1} adjustsFontSizeToFit>
-                  @{(item.username || "").toLocaleLowerCase("en-US")}
-                </Text>
-              </View>
-            </View>
-
-            <View style={styles.rightSection}>
-              <View style={[styles.trophyChip, { backgroundColor: isDarkMode ? "rgba(255,255,255,0.10)" : "rgba(0,0,0,0.05)", borderColor: isDarkMode ? "rgba(255,255,255,0.14)" : "rgba(0,0,0,0.08)" }]}>
-                <Text style={[styles.trophyIcon, { color: isDarkMode ? "rgba(255,255,255,0.92)" : "rgba(0,0,0,0.70)" }]}>🏆</Text>
-                <Text style={[styles.score, { color: isDarkMode ? "rgba(255,255,255,0.96)" : "#0B0B10" }]} numberOfLines={1} adjustsFontSizeToFit>
-                  {Number(item.trophies || 0).toLocaleString(i18n.language)}
-                </Text>
-              </View>
-              <Text style={[styles.rank, { color: secondaryText }]} numberOfLines={1}>
-                #{typeof rank === "number" ? rank.toLocaleString(i18n.language) : rank}
-              </Text>
-            </View>
-          </Animated.View>
-        );
-      }),
-    [currentTheme, currentUser, t, isDarkMode, i18n.language]
-  );
-
-  // ─── listPlayers (inchangé) ───────────────────────────────────────────────
-  const listPlayers = useMemo(() => {
-    const basis = selectedTab === "global" ? players : filteredPlayers;
-    const slice = filteredPlayers.slice(3, 20);
-    const idx = basis.findIndex((p) => p.id === currentUser?.id);
-    if (currentUser && idx > 19) slice.push({ ...currentUser, rank: idx + 1 });
-    return slice;
-  }, [filteredPlayers, players, currentUser, selectedTab, weeklyPlayers]);
-
-  // ─── MyRankCard (inchangé) ────────────────────────────────────────────────
-  const MyRankCard = useMemo(() => {
-    if (!currentUser) return null;
-    const basis = selectedTab === "global" ? players : filteredPlayers;
-    const myIndex = basis.findIndex((p) => p.id === currentUser.id);
-    const myRank = myIndex >= 0 ? myIndex + 1 : undefined;
-    return (
-      <View style={styles.myRankOuter}>
-        <LinearGradient colors={meRingGrad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.myRankRing}>
-          <View pointerEvents="none" style={[styles.myRankHalo, { backgroundColor: meHalo }]} />
-          <View style={[styles.myRankCard, { backgroundColor: isDarkMode ? "rgba(255,255,255,0.09)" : "rgba(255,255,255,0.95)", borderWidth: 0 }]}>
-            <LinearGradient
-              pointerEvents="none"
-              colors={["transparent", isDarkMode ? "rgba(255,255,255,0.10)" : "rgba(255,255,255,0.55)", "transparent"]}
-              start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-              style={styles.myRankSheen}
-            />
-            <View style={styles.myRankLeft}>
-              <Image
-                source={currentUser.profileImage ? { uri: currentUser.profileImage } : require("../assets/images/default-profile.webp")}
-                style={[styles.myRankAvatar, { borderColor: isDarkMode ? "rgba(255,255,255,0.28)" : "rgba(0,0,0,0.14)" }]}
-                accessibilityRole="image"
-              />
-              <View style={{ marginLeft: 10 }}>
-                <Text style={[styles.myRankName, { color: primaryText }]} numberOfLines={1} adjustsFontSizeToFit>
-                  {currentUser.username || t("leaderboard.unknown", { defaultValue: "Unknown" })}
-                </Text>
-                <View style={[styles.myRankSubRow, { flexDirection: I18nManager.isRTL ? "row-reverse" : "row" }]}>
-                  <Text style={[styles.myRankSub, { color: secondaryText }]} numberOfLines={1} adjustsFontSizeToFit>
-                    {myRank ? `#${myRank.toLocaleString(i18n.language)}` : "—"}
-                  </Text>
-                  <Text style={[styles.myRankSub, { color: secondaryText }]}> · </Text>
-                  <Text style={[styles.myRankSub, { color: secondaryText }]}>🏆 </Text>
-                  <Text style={[styles.myRankTrophyText, { color: secondaryText }]} numberOfLines={1} adjustsFontSizeToFit>
-                    {Number(currentUser.trophies || 0).toLocaleString(i18n.language)}
-                  </Text>
-                </View>
-              </View>
-            </View>
-            <TouchableOpacity
-              onPress={shareMyRankCard}
-              style={[styles.myRankShareBtn, { backgroundColor: isDarkMode ? "rgba(255,255,255,0.14)" : "rgba(0,0,0,0.06)", borderWidth: StyleSheet.hairlineWidth, borderColor: isDarkMode ? "rgba(255,255,255,0.22)" : "rgba(0,0,0,0.10)" }]}
-              activeOpacity={0.85}
-              accessibilityRole="button"
-              accessibilityLabel={t("leaderboard.share")}
-            >
-              <Ionicons name="share-social-outline" size={18} color={isDarkMode ? "#fff" : "#0B0B10"} />
-              <Text style={[styles.myRankShareText, { color: isDarkMode ? "#fff" : "#0B0B10" }]}>
-                {t("leaderboard.share")}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </LinearGradient>
-      </View>
-    );
-  }, [currentUser, players, filteredPlayers, selectedTab, shareMyRankCard, t, i18n.language]);
-
-  // ─── Skeleton ─────────────────────────────────────────────────────────────
+  // ── Skeleton ────────────────────────────────────────────────────────────────
   if (loading) {
     return (
       <LinearGradient
-        colors={[currentTheme.colors.background, currentTheme.colors.cardBackground, currentTheme.colors.primary + "22"]}
-        style={styles.gradientContainer} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+        colors={[currentTheme.colors.background, currentTheme.colors.cardBackground]}
+        style={S.flex}
       >
-        <SafeAreaView style={styles.safeArea}>
-          <StatusBar hidden />
+        <SafeAreaView style={S.flex}>
+          <StatusBar style={isDark ? "light" : "dark"} />
           <CustomHeader title={t("leaderboard.title")} />
-          <View style={{ paddingHorizontal: SPACING, marginTop: SPACING * 2 }}>
-            {/* Podium skeleton — mêmes proportions que le vrai */}
-            <View style={[styles.podiumScene, { opacity: 0.7 }]}>
-              {[
-                { h: normalizeSize(50), av: normalizeSize(72) },
-                { h: normalizeSize(72), av: normalizeSize(88) },
-                { h: normalizeSize(38), av: normalizeSize(66) },
-              ].map((cfg, i) => (
-                <View key={i} style={[styles.podiumSlot]}>
-                  <View style={[styles.podiumAvatarZone, { marginBottom: normalizeSize(8) }]}>
-                    <LinearGradient
-                      colors={[currentTheme.colors.cardBackground, currentTheme.colors.background]}
-                      style={{ width: cfg.av + 10, height: cfg.av + 10, borderRadius: (cfg.av + 10) / 2 }}
-                    />
-                  </View>
-                  <View style={{ width: normalizeSize(60), height: normalizeSize(12), borderRadius: 6, backgroundColor: currentTheme.colors.background + "55", marginBottom: 6 }} />
-                  <View style={{ width: normalizeSize(40), height: normalizeSize(10), borderRadius: 5, backgroundColor: currentTheme.colors.background + "40", marginBottom: normalizeSize(8) }} />
-                  <LinearGradient
-                    colors={[currentTheme.colors.cardBackground, currentTheme.colors.background]}
-                    style={[styles.podiumPedestal, { height: cfg.h, borderColor: "transparent" }]}
-                  />
-                </View>
-              ))}
-            </View>
-            {/* Row skeletons */}
-            <View style={styles.listContainer}>
-              {[...Array(5)].map((_, i) => (
-                <View key={i} style={styles.skelRow}>
-                  <View style={styles.leftSection}>
-                    <View style={{ width: normalizeSize(48), height: normalizeSize(48), borderRadius: normalizeSize(24), backgroundColor: currentTheme.colors.background + "55" }} />
-                    <View style={{ marginLeft: SPACING }}>
-                      <View style={{ width: normalizeSize(120), height: normalizeSize(14), borderRadius: 7, backgroundColor: currentTheme.colors.background + "55", marginBottom: 6 }} />
-                      <View style={{ width: normalizeSize(80),  height: normalizeSize(11), borderRadius: 5, backgroundColor: currentTheme.colors.background + "40" }} />
-                    </View>
-                  </View>
-                  <View style={{ width: normalizeSize(70), height: normalizeSize(28), borderRadius: 14, backgroundColor: currentTheme.colors.background + "55" }} />
-                </View>
-              ))}
-            </View>
-          </View>
+          <SkeletonLoader isDark={isDark} C={C} />
         </SafeAreaView>
       </LinearGradient>
     );
   }
 
-  // ─── Render ───────────────────────────────────────────────────────────────
+  // ── Render ──────────────────────────────────────────────────────────────────
   return (
     <LinearGradient
-      colors={[currentTheme.colors.background, currentTheme.colors.cardBackground, currentTheme.colors.primary + "22"]}
-      style={styles.gradientContainer} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+      colors={[currentTheme.colors.background, currentTheme.colors.cardBackground, currentTheme.colors.primary + "18"]}
+      style={S.flex}
+      start={{ x: 0, y: 0 }} end={{ x: 0.5, y: 1 }}
     >
-      <LinearGradient pointerEvents="none" colors={[currentTheme.colors.primary + "33", "transparent"]} style={styles.bgOrbTop} />
-      <LinearGradient pointerEvents="none" colors={[currentTheme.colors.secondary + "33", "transparent"]} style={styles.bgOrbBottom} />
-
-      <SafeAreaView style={styles.safeArea}>
-        <StatusBar translucent backgroundColor="transparent" barStyle={isDarkMode ? "light-content" : "dark-content"} />
+      <SafeAreaView style={S.flex}>
+        <StatusBar style={isDark ? "light" : "dark"} />
         <CustomHeader title={t("leaderboard.title")} />
 
-        {/* Tabs */}
-        <Animated.View entering={FadeInUp.delay(100)} style={styles.tabsContainer}>
-          <BlurView intensity={28} tint={isDarkMode ? "dark" : "light"} style={styles.tabsBlur}>
-            {(["region", "national", "global"] as const).map((tab) => {
-              const active = selectedTab === tab;
+        {/* ── Tabs ── */}
+        <Animated.View entering={FadeInUp.delay(60).duration(280)} style={S.tabsRow}>
+          <BlurView
+            intensity={isDark ? 22 : 16}
+            tint={isDark ? "dark" : "light"}
+            style={S.tabsBlur}
+          >
+            {(["global", "national", "regional"] as const).map((t_) => {
+              const active = tab === t_;
               return (
-                <Animated.View key={tab} entering={ZoomIn.delay(100 * (["region", "national", "global"].indexOf(tab) + 1))} style={styles.tabWrap}>
-                  <TouchableOpacity
-                    onPress={() => setSelectedTab(tab)}
-                    activeOpacity={0.85}
-                    accessibilityRole="button"
-                    accessibilityLabel={t(`leaderboard.filter.${tab}`)}
-                    testID={`tab-${tab}`}
-                    style={[styles.tab, active && styles.tabActive]}
-                  >
-                    {active && (
-                      <LinearGradient
-                        colors={[currentTheme.colors.secondary, currentTheme.colors.primary]}
-                        start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-                        style={styles.tabGradientBg}
-                      />
-                    )}
-                    <Text style={[styles.tabText, { color: active ? "#FFFFFF" : isDarkMode ? "#EAEAEA" : "#111111" }]} numberOfLines={1} adjustsFontSizeToFit>
-                      {t(`leaderboard.tab.${tab}`)}
-                    </Text>
-                  </TouchableOpacity>
-                </Animated.View>
+                <TouchableOpacity
+                  key={t_}
+                  onPress={() => setTab(t_)}
+                  style={[S.tab, active && { backgroundColor: C.orange }]}
+                  activeOpacity={0.82}
+                >
+                  <Text style={[S.tabText, { color: active ? "#FFF" : C.textMuted }]} numberOfLines={1} adjustsFontSizeToFit>
+                    {t(`leaderboard.tab.${t_}`)}
+                  </Text>
+                </TouchableOpacity>
               );
             })}
           </BlurView>
-        </Animated.View>
 
-        {/* ── Toggle Cette semaine ───────────────────────────────────────── */}
-        <Animated.View entering={FadeInUp.delay(160)} style={{ paddingHorizontal: SPACING, marginBottom: SPACING * 0.8 }}>
+          {/* Weekly toggle */}
           <TouchableOpacity
-            onPress={() => setSelectedTab(prev => prev === "weekly" ? "global" : "weekly")}
+            onPress={() => setTab((prev) => prev === "weekly" ? "global" : "weekly")}
+            style={[
+              S.weeklyToggle,
+              {
+                backgroundColor: tab === "weekly" ? C.orangeLight : (isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.03)"),
+                borderColor: tab === "weekly" ? C.orangeBorder : C.stroke,
+              },
+            ]}
             activeOpacity={0.85}
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: normalizeSize(8),
-              paddingVertical: normalizeSize(10),
-              paddingHorizontal: normalizeSize(16),
-              borderRadius: normalizeSize(12),
-              borderWidth: StyleSheet.hairlineWidth,
-              borderColor: selectedTab === "weekly"
-                ? (isDarkMode ? "rgba(249,115,22,0.55)" : "rgba(249,115,22,0.40)")
-                : (isDarkMode ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.08)"),
-              backgroundColor: selectedTab === "weekly"
-                ? (isDarkMode ? "rgba(249,115,22,0.12)" : "rgba(249,115,22,0.08)")
-                : (isDarkMode ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)"),
-            }}
           >
             <Ionicons
               name="calendar-outline"
-              size={normalizeSize(14)}
-              color={selectedTab === "weekly" ? "#F97316" : (isDarkMode ? "rgba(255,255,255,0.55)" : "rgba(0,0,0,0.40)")}
+              size={ns(13)}
+              color={tab === "weekly" ? C.orange : C.textMuted}
             />
-            <Text style={{
-              fontFamily: "Comfortaa_700Bold",
-              fontSize: normalizeFont(13),
-              color: selectedTab === "weekly" ? "#F97316" : (isDarkMode ? "rgba(255,255,255,0.55)" : "rgba(0,0,0,0.45)"),
-            }}>
+            <Text style={[S.weeklyToggleText, { color: tab === "weekly" ? C.orange : C.textMuted }]}>
               {t("leaderboard.tab.weekly", { defaultValue: "Cette semaine" })}
             </Text>
-            {selectedTab === "weekly" && (
-              <Ionicons name="checkmark-circle" size={normalizeSize(14)} color="#F97316" />
+            {tab === "weekly" && (
+              <Ionicons name="checkmark-circle" size={ns(12)} color={C.orange} />
             )}
           </TouchableOpacity>
         </Animated.View>
 
+        {/* ── Weekly header info ── */}
+        {tab === "weekly" && (
+          <Animated.View entering={FadeIn.duration(220)} style={[S.weeklyInfoBanner, { backgroundColor: C.orangeLight, borderColor: C.orangeBorder }]}>
+            <Ionicons name="flame-outline" size={ns(14)} color={C.orange} />
+            <Text style={[S.weeklyInfoText, { color: C.orange }]}>
+              {t("leaderboard.weeklyInfo", { defaultValue: "Trophées gagnés cette semaine — reset chaque lundi" })}
+            </Text>
+          </Animated.View>
+        )}
+
+        {/* ── Main list ── */}
         <ScrollView
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={S.scroll}
           showsVerticalScrollIndicator={false}
-          keyboardDismissMode="on-drag"
-          keyboardShouldPersistTaps="handled"
           scrollEventThrottle={16}
           refreshControl={
             <RefreshControl
-              refreshing={refreshing} onRefresh={onRefresh}
-              tintColor={currentTheme.colors.secondary}
-              colors={[currentTheme.colors.secondary]}
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={C.orange}
+              colors={[C.orange]}
             />
           }
         >
-          {filteredPlayers.length > 0 ? (
+          {displayPlayers.length >= 3 ? (
             <>
-              {renderTopThree()}
-              {MyRankCard}
-              <View style={styles.listContainer}>
-                <FlatList
-                  data={listPlayers}
-                  renderItem={({ item, index }) => <PlayerItem item={item} index={index} />}
-                  keyExtractor={(item) => item.id}
-                  scrollEnabled={false}
-                  initialNumToRender={10}
-                  maxToRenderPerBatch={10}
-                  windowSize={7}
-                  getItemLayout={(_, index) => ({ length: normalizeSize(72), offset: normalizeSize(72) * index, index })}
-                  accessibilityRole="list"
-                  accessibilityLabel={t("leaderboard.listLabel")}
+              <PodiumSection
+                podium={podium}
+                isDark={isDark}
+                C={C}
+                i18nLang={i18n.language}
+                tab={tab}
+                t={t}
+              />
+
+              {/* My rank card */}
+              {currentUser && (
+                <MyRankCard
+                  currentUser={currentUser}
+                  displayPlayers={displayPlayers}
+                  tab={tab}
+                  isDark={isDark}
+                  C={C}
+                  i18nLang={i18n.language}
+                  onShare={shareMyRank}
+                  t={t}
                 />
-              </View>
+              )}
+
+              {/* Rows 4-20 */}
+              {listRows.length > 0 && (
+                <View style={S.listWrap}>
+                  {listRows.map((item, index) => (
+                    <PlayerRow
+                      key={item.id}
+                      item={item}
+                      index={index}
+                      rank={item.rank ?? index + 4}
+                      isMe={item.id === currentUser?.id}
+                      isDark={isDark}
+                      C={C}
+                      i18nLang={i18n.language}
+                      tab={tab}
+                    />
+                  ))}
+                </View>
+              )}
             </>
           ) : (
-            <Text style={[styles.noPlayersText, { color: currentTheme.colors.textSecondary, textAlign: "center" }]} numberOfLines={3} adjustsFontSizeToFit>
-              {t("leaderboard.noPlayers")}
-            </Text>
+            <EmptyState isDark={isDark} C={C} tab={tab} weeklyPlayers={weeklyPlayers} t={t} />
           )}
 
-          {locationDisabledMessage && (
-            <Animated.View entering={FadeInUp.delay(200)} style={styles.errorContainer}>
-              <Text style={[styles.errorText, { color: currentTheme.colors.textSecondary }]}>
-                {locationDisabledMessage}
-              </Text>
-              <TouchableOpacity style={[styles.settingsButton, { backgroundColor: currentTheme.colors.primary, marginBottom: SPACING }]} onPress={onRefresh} accessibilityLabel={t("leaderboard.retry", { defaultValue: "Réessayer" })}>
-                <Text style={[styles.settingsButtonText, { color: currentTheme.colors.textPrimary }]}>{t("leaderboard.retry", { defaultValue: "Réessayer" })}</Text>
+          {locationMsg && (
+            <View style={S.locationMsgWrap}>
+              <Text style={[S.locationMsg, { color: C.textMuted }]}>{locationMsg}</Text>
+              <TouchableOpacity style={[S.retryBtn, { backgroundColor: C.orange }]} onPress={onRefresh}>
+                <Text style={S.retryBtnText}>{t("leaderboard.retry", { defaultValue: "Réessayer" })}</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.settingsButton, { backgroundColor: currentTheme.colors.primary }]} onPress={() => router.push("/settings")} accessibilityLabel={t("leaderboard.enableLocation")}>
-                <Text style={[styles.settingsButtonText, { color: currentTheme.colors.textPrimary }]}>{t("leaderboard.enableLocation")}</Text>
-              </TouchableOpacity>
-            </Animated.View>
+            </View>
           )}
         </ScrollView>
       </SafeAreaView>
 
       {rankSharePayload && (
         <View style={{ position: "absolute", opacity: 0, pointerEvents: "none" }}>
-          <RankShareCard ref={rankShareRef} username={rankSharePayload.username} rank={rankSharePayload.rank} trophies={rankSharePayload.trophies} avatarUri={rankSharePayload.avatarUri} />
+          <RankShareCard
+            ref={rankShareRef}
+            username={rankSharePayload.username}
+            rank={rankSharePayload.rank}
+            trophies={rankSharePayload.trophies}
+            avatarUri={rankSharePayload.avatarUri}
+          />
         </View>
       )}
     </LinearGradient>
   );
 }
 
+// ─── Podium ───────────────────────────────────────────────────────────────────
+
+function PodiumSection({
+  podium, isDark, C, i18nLang, tab, t,
+}: {
+  podium: Player[]; isDark: boolean; C: any; i18nLang: string; tab: Tab;
+  t: (k: string, o?: any) => string;
+}) {
+  if (podium.length < 3) return null;
+
+  const [first, second, third] = podium;
+  const slots = [
+    { player: second, rank: 2 as const, delay: 80  },
+    { player: first,  rank: 1 as const, delay: 0   },
+    { player: third,  rank: 3 as const, delay: 160 },
+  ];
+
+  return (
+    <Animated.View
+      key={podium.map((p) => p.id).join("-")}
+      entering={FadeInUp.delay(100).duration(340)}
+      style={S.podiumScene}
+    >
+      {slots.map(({ player, rank, delay }) => {
+        const cfg = PODIUM[rank];
+        const avatarSize = cfg.avatarSize;
+        const ringSize   = avatarSize + cfg.pad * 2;
+        const isFirst    = rank === 1;
+        const trophyVal  = tab === "weekly" ? (player.weeklyTrophies ?? player.trophies) : player.trophies;
+
+        return (
+          <Animated.View
+            key={`${rank}-${player.id}`}
+            entering={ZoomIn.delay(delay).duration(360)}
+            style={[S.podiumSlot, { zIndex: isFirst ? 3 : 1 }]}
+          >
+            {/* Avatar zone */}
+            <View style={S.podiumAvatarZone}>
+              {isFirst && (
+                <View style={[S.podiumGlow, {
+                  width: ringSize + ns(28), height: ringSize + ns(28),
+                  borderRadius: (ringSize + ns(28)) / 2,
+                  backgroundColor: cfg.glow,
+                  top: -(ns(14)), left: -(ns(14)),
+                }]} pointerEvents="none" />
+              )}
+              <LinearGradient
+                colors={cfg.ring}
+                start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                style={{ width: ringSize, height: ringSize, borderRadius: ringSize / 2, alignItems: "center", justifyContent: "center" }}
+              >
+                <Image
+                  source={player.profileImage ? { uri: player.profileImage } : require("../assets/images/default-profile.webp")}
+                  defaultSource={require("../assets/images/default-profile.webp")}
+                  style={{
+                    width: avatarSize, height: avatarSize, borderRadius: avatarSize / 2,
+                    borderWidth: isFirst ? ns(2.5) : ns(2),
+                    borderColor: isDark ? "rgba(255,255,255,0.16)" : "rgba(255,255,255,0.9)",
+                  }}
+                />
+              </LinearGradient>
+
+              {/* Medal chip */}
+              <View style={[S.medalChip, {
+                width: cfg.medalSize, height: cfg.medalSize, borderRadius: cfg.medalSize / 2,
+                bottom: isFirst ? -ns(6) : -ns(5), right: isFirst ? -ns(4) : -ns(3),
+                backgroundColor: isDark ? "rgba(12,14,22,0.90)" : "rgba(255,255,255,0.94)",
+                borderColor: isDark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.07)",
+              }]}>
+                <Text style={{ fontSize: isFirst ? ns(17) : ns(13), includeFontPadding: false }}>
+                  {cfg.medal}
+                </Text>
+              </View>
+            </View>
+
+            {/* Name */}
+            <Text
+              style={[S.podiumName, { fontSize: cfg.label, color: C.text }]}
+              numberOfLines={1} adjustsFontSizeToFit
+            >
+              {player.username}
+            </Text>
+
+            {/* Score */}
+            <View style={S.podiumScoreRow}>
+              <Text style={{ fontSize: ns(isFirst ? 12 : 10.5), marginRight: ns(2) }}>🏆</Text>
+              <Text style={[S.podiumScore, { fontSize: cfg.score, color: C.podiumScore }]} numberOfLines={1}>
+                {Number(trophyVal).toLocaleString(i18nLang)}
+              </Text>
+            </View>
+
+            {/* Pedestal */}
+            <View style={[S.pedestal, {
+              height: cfg.h,
+              borderColor: isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.06)",
+              backgroundColor: isDark ? "rgba(255,255,255,0.04)" : "rgba(255,255,255,0.55)",
+            }]}>
+              <Text style={[S.pedestalRank, {
+                fontSize: isFirst ? ns(22) : ns(16),
+                color: isDark ? "rgba(255,255,255,0.18)" : "rgba(0,0,0,0.15)",
+              }]}>
+                {rank}
+              </Text>
+            </View>
+          </Animated.View>
+        );
+      })}
+    </Animated.View>
+  );
+}
+
+// ─── My Rank Card ─────────────────────────────────────────────────────────────
+
+function MyRankCard({
+  currentUser, displayPlayers, tab, isDark, C, i18nLang, onShare, t,
+}: {
+  currentUser: Player; displayPlayers: Player[]; tab: Tab;
+  isDark: boolean; C: any; i18nLang: string;
+  onShare: () => void; t: (k: string, o?: any) => string;
+}) {
+  const idx   = displayPlayers.findIndex((p) => p.id === currentUser.id);
+  const myRank = idx >= 0 ? idx + 1 : undefined;
+  const trophyVal = tab === "weekly"
+    ? (currentUser.weeklyTrophies ?? 0)
+    : currentUser.trophies;
+
+  const pulse = useSharedValue(1);
+  useEffect(() => {
+    pulse.value = withRepeat(
+      withSequence(
+        withTiming(1.012, { duration: 900, easing: Easing.inOut(Easing.ease) }),
+        withTiming(1, { duration: 900, easing: Easing.inOut(Easing.ease) })
+      ), -1, true
+    );
+  }, []);
+  const pulseStyle = useAnimatedStyle(() => ({ transform: [{ scale: pulse.value }] }));
+
+  return (
+    <Animated.View
+      entering={FadeInUp.delay(260).duration(300)}
+      style={[S.myRankWrap, pulseStyle]}
+    >
+      <LinearGradient
+        colors={isDark
+          ? ["rgba(249,115,22,0.28)", "rgba(249,115,22,0.10)", "rgba(249,115,22,0.18)"]
+          : ["rgba(249,115,22,0.18)", "rgba(249,115,22,0.06)", "rgba(249,115,22,0.12)"]}
+        start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+        style={S.myRankRing}
+      >
+        <View style={[S.myRankCard, {
+          backgroundColor: isDark ? "rgba(15,10,5,0.92)" : "rgba(255,255,255,0.96)",
+        }]}>
+          {/* Left */}
+          <View style={S.myRankLeft}>
+            <Image
+              source={currentUser.profileImage ? { uri: currentUser.profileImage } : require("../assets/images/default-profile.webp")}
+              style={[S.myRankAvatar, { borderColor: isDark ? "rgba(255,255,255,0.20)" : "rgba(249,115,22,0.30)" }]}
+            />
+            <View style={{ marginLeft: ns(10), flex: 1 }}>
+              <Text style={[S.myRankName, { color: C.text }]} numberOfLines={1}>
+                {currentUser.username}
+              </Text>
+              <View style={S.myRankSubRow}>
+                <Text style={[S.myRankSub, { color: C.orange }]}>
+                  {myRank ? `#${myRank.toLocaleString(i18nLang)}` : "—"}
+                </Text>
+                <Text style={[S.myRankDot, { color: C.textMuted }]}> · </Text>
+                <Text style={[S.myRankSub, { color: C.textMuted }]}>
+                  🏆 {Number(trophyVal).toLocaleString(i18nLang)}
+                </Text>
+                {tab === "weekly" && (
+                  <Text style={[S.myRankWeeklyBadge, { color: C.orange }]}>
+                    {" "}cette semaine
+                  </Text>
+                )}
+              </View>
+            </View>
+          </View>
+
+          {/* Share btn */}
+          <TouchableOpacity
+            onPress={onShare}
+            style={[S.shareBtn, { backgroundColor: C.orangeLight, borderColor: C.orangeBorder }]}
+            activeOpacity={0.82}
+          >
+            <Ionicons name="share-social-outline" size={ns(15)} color={C.orange} />
+            <Text style={[S.shareBtnText, { color: C.orange }]}>
+              {t("leaderboard.share")}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </LinearGradient>
+    </Animated.View>
+  );
+}
+
+// ─── Player Row ───────────────────────────────────────────────────────────────
+
+function PlayerRow({
+  item, index, rank, isMe, isDark, C, i18nLang, tab,
+}: {
+  item: Player; index: number; rank: number; isMe: boolean;
+  isDark: boolean; C: any; i18nLang: string; tab: Tab;
+}) {
+  const trophyVal = tab === "weekly" ? (item.weeklyTrophies ?? item.trophies) : item.trophies;
+  const rankColor = rank === 4 ? "#FFD700" : rank === 5 ? "#C0C0C0" : rank === 6 ? "#CD7F32" : C.textMuted;
+
+  return (
+    <Animated.View
+      entering={FadeInUp.delay(180 + index * 35).duration(260)}
+      style={[
+        S.row,
+        {
+          backgroundColor: isMe ? C.cardBgMe : C.cardBg,
+          borderColor: isMe ? C.strokeMe : C.stroke,
+          borderWidth: isMe ? 1 : StyleSheet.hairlineWidth,
+        },
+      ]}
+    >
+      {/* Rank */}
+      <View style={S.rowRank}>
+        <Text style={[S.rowRankText, { color: rankColor, fontFamily: "Comfortaa_700Bold" }]} numberOfLines={1}>
+          #{rank}
+        </Text>
+      </View>
+
+      {/* Avatar */}
+      <View style={S.rowAvatarWrap}>
+        <Image
+          source={item.profileImage ? { uri: item.profileImage } : require("../assets/images/default-profile.webp")}
+          defaultSource={require("../assets/images/default-profile.webp")}
+          style={[S.rowAvatar, isMe && { borderWidth: 1.5, borderColor: C.orange }]}
+        />
+        {item.isPioneer && (
+          <View style={[S.pioneerDot, { backgroundColor: "#FFD700" }]} />
+        )}
+      </View>
+
+      {/* Info */}
+      <View style={S.rowInfo}>
+        <Text style={[S.rowName, { color: C.text }]} numberOfLines={1} adjustsFontSizeToFit>
+          {item.username}
+          {isMe && (
+            <Text style={{ color: C.orange, fontSize: ns(10) }}> ◀ toi</Text>
+          )}
+        </Text>
+        {item.isPioneer && (
+          <Text style={[S.pioneerLabel, { color: "#FFD700" }]}>Pioneer</Text>
+        )}
+      </View>
+
+      {/* Trophy chip */}
+      <View style={[S.trophyChip, {
+        backgroundColor: isDark ? "rgba(249,115,22,0.10)" : "rgba(249,115,22,0.06)",
+        borderColor: isDark ? "rgba(249,115,22,0.20)" : "rgba(249,115,22,0.14)",
+      }]}>
+        <Text style={{ fontSize: ns(12), marginRight: ns(3) }}>🏆</Text>
+        <Text style={[S.trophyChipText, { color: C.text }]} numberOfLines={1} adjustsFontSizeToFit>
+          {Number(trophyVal).toLocaleString(i18nLang)}
+        </Text>
+      </View>
+    </Animated.View>
+  );
+}
+
+// ─── Empty State ──────────────────────────────────────────────────────────────
+
+function EmptyState({ isDark, C, tab, weeklyPlayers, t }: {
+  isDark: boolean; C: any; tab: Tab; weeklyPlayers: Player[];
+  t: (k: string, o?: any) => string;
+}) {
+  const msg = tab === "weekly" && weeklyPlayers.length === 0
+    ? t("leaderboard.weeklyEmpty", { defaultValue: "Pas encore de données cette semaine.\nReviens lundi après une semaine active !" })
+    : t("leaderboard.noPlayers");
+
+  return (
+    <Animated.View entering={FadeIn.duration(300)} style={S.emptyWrap}>
+      <Ionicons name="trophy-outline" size={ns(52)} color={C.orange} style={{ opacity: 0.6, marginBottom: ns(14) }} />
+      <Text style={[S.emptyText, { color: C.textMuted }]}>{msg}</Text>
+    </Animated.View>
+  );
+}
+
+// ─── Skeleton ─────────────────────────────────────────────────────────────────
+
+function SkeletonLoader({ isDark, C }: { isDark: boolean; C: any }) {
+  const pulse = useSharedValue(0.5);
+  useEffect(() => {
+    pulse.value = withRepeat(
+      withSequence(
+        withTiming(1, { duration: 700, easing: Easing.inOut(Easing.ease) }),
+        withTiming(0.5, { duration: 700, easing: Easing.inOut(Easing.ease) })
+      ), -1, true
+    );
+  }, []);
+  const skelStyle = useAnimatedStyle(() => ({ opacity: pulse.value }));
+  const bg = isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.06)";
+
+  return (
+    <View style={{ paddingHorizontal: SPACING, marginTop: SPACING * 1.5 }}>
+      {/* Podium skeleton */}
+      <Animated.View style={[S.podiumScene, skelStyle]}>
+        {[{ h: ns(56), av: ns(72) }, { h: ns(80), av: ns(88) }, { h: ns(42), av: ns(66) }].map((c, i) => (
+          <View key={i} style={S.podiumSlot}>
+            <View style={{ width: c.av + 10, height: c.av + 10, borderRadius: (c.av + 10) / 2, backgroundColor: bg, marginBottom: ns(8) }} />
+            <View style={{ width: ns(64), height: ns(11), borderRadius: 6, backgroundColor: bg, marginBottom: ns(5) }} />
+            <View style={{ width: ns(40), height: ns(10), borderRadius: 5, backgroundColor: bg, marginBottom: ns(8) }} />
+            <View style={{ width: "80%", height: c.h, borderRadius: ns(8), backgroundColor: bg }} />
+          </View>
+        ))}
+      </Animated.View>
+      {/* Row skeletons */}
+      {[...Array(6)].map((_, i) => (
+        <Animated.View key={i} style={[S.row, skelStyle, { backgroundColor: bg, borderColor: "transparent", marginBottom: ns(7) }]}>
+          <View style={{ width: ns(30), height: ns(14), borderRadius: 4, backgroundColor: isDark ? "rgba(255,255,255,0.10)" : "rgba(0,0,0,0.08)", marginRight: ns(10) }} />
+          <View style={{ width: ns(44), height: ns(44), borderRadius: ns(22), backgroundColor: isDark ? "rgba(255,255,255,0.10)" : "rgba(0,0,0,0.08)" }} />
+          <View style={{ flex: 1, marginLeft: ns(10) }}>
+            <View style={{ width: "55%", height: ns(13), borderRadius: 5, backgroundColor: isDark ? "rgba(255,255,255,0.10)" : "rgba(0,0,0,0.08)", marginBottom: ns(5) }} />
+            <View style={{ width: "35%", height: ns(10), borderRadius: 4, backgroundColor: isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.06)" }} />
+          </View>
+          <View style={{ width: ns(70), height: ns(28), borderRadius: ns(12), backgroundColor: isDark ? "rgba(255,255,255,0.10)" : "rgba(0,0,0,0.08)" }} />
+        </Animated.View>
+      ))}
+    </View>
+  );
+}
+
 // ─── Styles ───────────────────────────────────────────────────────────────────
-const styles = StyleSheet.create({
-  safeArea:           { flex: 1, paddingTop: 0 },
-  gradientContainer:  { flex: 1 },
 
-  bgOrbTop: {
-    position: "absolute", top: -SCREEN_WIDTH * 0.28, right: -SCREEN_WIDTH * 0.22,
-    width: SCREEN_WIDTH * 0.86, height: SCREEN_WIDTH * 0.86,
-    borderRadius: SCREEN_WIDTH * 0.43, opacity: 0.42,
-    transform: [{ rotate: "18deg" }],
-  },
-  bgOrbBottom: {
-    position: "absolute", bottom: -SCREEN_WIDTH * 0.30, left: -SCREEN_WIDTH * 0.25,
-    width: SCREEN_WIDTH * 0.95, height: SCREEN_WIDTH * 0.95,
-    borderRadius: SCREEN_WIDTH * 0.475, opacity: 0.40,
-    transform: [{ rotate: "-10deg" }],
-  },
-
-  // ── ✅ Nouveau podium ──────────────────────────────────────────────────────
-  podiumScene: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "flex-end",
-    paddingHorizontal: SPACING * 0.5,
-    marginTop: SPACING * 1.2,
-    marginBottom: SPACING * 0.2,
-    // gap entre slots
-    columnGap: normalizeSize(4),
-  },
-
-  podiumFloor: {
-    position: "absolute",
-    bottom: 0,
-    left: SPACING * 2,
-    right: SPACING * 2,
-    height: StyleSheet.hairlineWidth,
-  },
-
-  podiumSlot: {
-    flex: 1,
-    alignItems: "center",
-    maxWidth: normalizeSize(118),
-  },
-
-  podiumAvatarZone: {
-    alignItems: "center",
-    justifyContent: "center",
-    position: "relative",
-  },
-
-  podiumGoldHalo: {
-    position: "absolute",
-    // width/height/borderRadius dynamiques inline
-  },
-
-  podiumMedalChip: {
-    position: "absolute",
-    // bottom/right/width/height/borderRadius dynamiques inline
-    borderWidth: StyleSheet.hairlineWidth,
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.20,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-
-  podiumSlotName: {
-    fontFamily: "Comfortaa_700Bold",
-    textAlign: "center",
-    includeFontPadding: false,
-    paddingHorizontal: normalizeSize(4),
-    maxWidth: "100%",
-    marginBottom: normalizeSize(2),
-  },
-
-  podiumSlotScoreRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: normalizeSize(8),
-  },
-
-  podiumSlotScore: {
-    fontFamily: "Comfortaa_700Bold",
-    includeFontPadding: false,
-  },
-
-  podiumPedestal: {
-    width: "86%",
-    borderTopLeftRadius:  normalizeSize(8),
-    borderTopRightRadius: normalizeSize(8),
-    borderWidth: StyleSheet.hairlineWidth,
-    borderBottomWidth: 0,
-    alignItems: "center",
-    justifyContent: "flex-end",
-    paddingBottom: normalizeSize(7),
-    overflow: "hidden",
-  },
-
-  podiumPedestalRank: {
-    fontFamily: "Comfortaa_700Bold",
-    includeFontPadding: false,
-  },
-  // ── fin podium ─────────────────────────────────────────────────────────────
+const S = StyleSheet.create({
+  flex:          { flex: 1 },
+  scroll:        { paddingBottom: ns(100), paddingTop: ns(4) },
 
   // Tabs
-  tabsContainer: { paddingHorizontal: SPACING, marginTop: SPACING * 1.2, marginBottom: SPACING * 0.6 },
-  tabsBlur: { flexDirection: "row", borderRadius: normalizeSize(16), padding: 5, overflow: "hidden", backgroundColor: "rgba(255,255,255,0.06)" },
-  tabWrap:  { flex: 1 },
-  tab:      { height: normalizeSize(40), borderRadius: normalizeSize(13), alignItems: "center", justifyContent: "center", overflow: "hidden", backgroundColor: "transparent" },
-  tabActive:{ backgroundColor: "rgba(255,255,255,0.10)" },
-  tabGradientBg: { ...StyleSheet.absoluteFillObject, borderRadius: normalizeSize(13), opacity: 0.55 },
-  tabText:  { fontSize: normalizeFont(13.5), fontFamily: "Comfortaa_700Bold", textAlign: "center", includeFontPadding: false },
+  tabsRow:       { paddingHorizontal: SPACING, marginTop: ns(12), marginBottom: ns(8), gap: ns(8) },
+  tabsBlur:      { flexDirection: "row", borderRadius: ns(14), padding: ns(4), overflow: "hidden", gap: ns(4) },
+  tab:           { flex: 1, height: ns(38), borderRadius: ns(11), alignItems: "center", justifyContent: "center", paddingHorizontal: ns(4) },
+  tabText:       { fontSize: ns(12.5), fontFamily: "Comfortaa_700Bold", textAlign: "center", includeFontPadding: false },
+  weeklyToggle:  { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: ns(6), paddingVertical: ns(9), paddingHorizontal: ns(14), borderRadius: ns(11), borderWidth: StyleSheet.hairlineWidth },
+  weeklyToggleText: { fontSize: ns(12.5), fontFamily: "Comfortaa_700Bold" },
+  weeklyInfoBanner: { marginHorizontal: SPACING, marginBottom: ns(10), flexDirection: "row", alignItems: "center", gap: ns(8), paddingVertical: ns(9), paddingHorizontal: ns(14), borderRadius: ns(12), borderWidth: StyleSheet.hairlineWidth },
+  weeklyInfoText: { flex: 1, fontSize: ns(11.5), fontFamily: "Comfortaa_400Regular" },
 
-  // Scroll
-  scrollContent: { paddingBottom: normalizeSize(90) + SPACING },
-  listContainer: { paddingHorizontal: SPACING, marginTop: SPACING * 0.8 },
+  // Podium
+  podiumScene:   { flexDirection: "row", justifyContent: "center", alignItems: "flex-end", paddingHorizontal: SPACING, marginTop: ns(12), marginBottom: ns(6), columnGap: ns(4) },
+  podiumSlot:    { flex: 1, alignItems: "center", maxWidth: ns(120) },
+  podiumAvatarZone: { alignItems: "center", justifyContent: "center", position: "relative", marginBottom: ns(8) },
+  podiumGlow:    { position: "absolute" },
+  medalChip:     { position: "absolute", borderWidth: StyleSheet.hairlineWidth, alignItems: "center", justifyContent: "center", shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.18, shadowRadius: 4, elevation: 4 },
+  podiumName:    { fontFamily: "Comfortaa_700Bold", textAlign: "center", includeFontPadding: false, paddingHorizontal: ns(2), maxWidth: "100%", marginBottom: ns(2) },
+  podiumScoreRow:{ flexDirection: "row", alignItems: "center", marginBottom: ns(8) },
+  podiumScore:   { fontFamily: "Comfortaa_700Bold", includeFontPadding: false },
+  pedestal:      { width: "88%", borderTopLeftRadius: ns(8), borderTopRightRadius: ns(8), borderWidth: StyleSheet.hairlineWidth, borderBottomWidth: 0, alignItems: "center", justifyContent: "flex-end", paddingBottom: ns(7), overflow: "hidden" },
+  pedestalRank:  { fontFamily: "Comfortaa_700Bold", includeFontPadding: false },
 
-  // Row
-  row: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: normalizeSize(12), paddingHorizontal: normalizeSize(12), borderRadius: normalizeSize(16), marginVertical: normalizeSize(5), overflow: "hidden" },
-  rowInnerHighlight: { position: "absolute", top: 0, left: 0, right: 0, height: "48%", borderRadius: normalizeSize(16), backgroundColor: "rgba(255,255,255,1)" },
-  leftSection:  { flexDirection: "row", alignItems: "center", flex: 1 },
-  rightSection: { alignItems: "flex-end", justifyContent: "center", marginLeft: 10, gap: normalizeSize(6) },
-  avatarWrap:   { position: "relative" },
-  avatar:       { width: normalizeSize(48), height: normalizeSize(48), borderRadius: normalizeSize(24) },
-  avatarMe:     { transform: [{ scale: 1.03 }] },
-  playerInfo:   { marginLeft: normalizeSize(12), flex: 1 },
-  name:         { fontSize: normalizeFont(15.5), fontFamily: "Comfortaa_700Bold", includeFontPadding: false },
-  handle:       { marginTop: 3, fontSize: normalizeFont(12), fontFamily: "Comfortaa_400Regular", includeFontPadding: false },
-  score:        { fontSize: normalizeFont(15), fontFamily: "Comfortaa_700Bold", includeFontPadding: false },
-  rank:         { marginTop: 3, fontSize: normalizeFont(12), fontFamily: "Comfortaa_400Regular", includeFontPadding: false, opacity: 0.9 },
-  trophyChip:   { flexDirection: "row", alignItems: "center", paddingHorizontal: normalizeSize(10), paddingVertical: normalizeSize(6), borderRadius: 999, borderWidth: 1 },
-  trophyIcon:   { fontSize: normalizeFont(13), marginRight: 6, includeFontPadding: false },
+  // My rank card
+  myRankWrap:    { marginHorizontal: SPACING, marginTop: ns(8), marginBottom: ns(4), borderRadius: ns(18) },
+  myRankRing:    { borderRadius: ns(18), padding: ns(2), overflow: "hidden" },
+  myRankCard:    { borderRadius: ns(16), paddingVertical: ns(12), paddingHorizontal: ns(14), flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  myRankLeft:    { flexDirection: "row", alignItems: "center", flex: 1 },
+  myRankAvatar:  { width: ns(44), height: ns(44), borderRadius: ns(22), borderWidth: StyleSheet.hairlineWidth },
+  myRankName:    { fontFamily: "Comfortaa_700Bold", fontSize: ns(14.5), includeFontPadding: false },
+  myRankSubRow:  { flexDirection: "row", alignItems: "center", flexWrap: "nowrap", marginTop: ns(2) },
+  myRankSub:     { fontSize: ns(12), fontFamily: "Comfortaa_700Bold", includeFontPadding: false },
+  myRankDot:     { fontSize: ns(12), fontFamily: "Comfortaa_400Regular", includeFontPadding: false },
+  myRankWeeklyBadge: { fontSize: ns(10), fontFamily: "Comfortaa_400Regular", includeFontPadding: false },
+  shareBtn:      { flexDirection: "row", alignItems: "center", gap: ns(5), paddingHorizontal: ns(12), paddingVertical: ns(9), borderRadius: ns(999), borderWidth: 1 },
+  shareBtnText:  { fontSize: ns(12), fontFamily: "Comfortaa_700Bold" },
 
-  // MyRankCard
-  myRankOuter:  { marginHorizontal: SPACING, marginTop: SPACING * 0.8, borderRadius: normalizeSize(18) },
-  myRankRing:   { borderRadius: normalizeSize(18), padding: normalizeSize(2), overflow: "hidden" },
-  myRankHalo:   { position: "absolute", top: -normalizeSize(18), right: -normalizeSize(22), width: normalizeSize(90), height: normalizeSize(90), borderRadius: 999, opacity: 0.9 },
-  myRankSheen:  { position: "absolute", top: -normalizeSize(22), left: -normalizeSize(40), width: "140%", height: normalizeSize(70), transform: [{ rotate: "-12deg" }], opacity: 0.9 },
-  myRankCard:   { width: "100%", paddingVertical: normalizeSize(12), paddingHorizontal: normalizeSize(12), borderRadius: normalizeSize(16), flexDirection: "row", alignItems: "center", justifyContent: "space-between", overflow: "hidden" },
-  myRankLeft:   { flexDirection: "row", alignItems: "center", flex: 1 },
-  myRankAvatar: { width: normalizeSize(44), height: normalizeSize(44), borderRadius: normalizeSize(22), borderWidth: StyleSheet.hairlineWidth },
-  myRankName:   { fontFamily: "Comfortaa_700Bold", fontSize: normalizeFont(14.5), includeFontPadding: false },
-  myRankSubRow: { marginTop: 2, alignItems: "center", flexWrap: "nowrap" },
-  myRankSub:    { fontFamily: "Comfortaa_400Regular", fontSize: normalizeFont(12), marginTop: 2, includeFontPadding: false },
-  myRankTrophyText: { fontFamily: "Comfortaa_700Bold", fontSize: normalizeFont(12), includeFontPadding: false },
-  myRankShareBtn:   { flexDirection: "row", alignItems: "center", paddingHorizontal: normalizeSize(12), paddingVertical: normalizeSize(9), borderRadius: 999 },
-  myRankShareText:  { marginLeft: 6, fontFamily: "Comfortaa_700Bold", fontSize: normalizeFont(12), includeFontPadding: false },
+  // Rows
+  listWrap:      { paddingHorizontal: SPACING, marginTop: ns(6) },
+  row:           { flexDirection: "row", alignItems: "center", borderRadius: ns(16), paddingVertical: ns(11), paddingHorizontal: ns(12), marginBottom: ns(6), overflow: "hidden" },
+  rowRank:       { width: ns(34), alignItems: "center" },
+  rowRankText:   { fontSize: ns(12), includeFontPadding: false },
+  rowAvatarWrap: { position: "relative" },
+  rowAvatar:     { width: ns(46), height: ns(46), borderRadius: ns(23) },
+  pioneerDot:    { position: "absolute", bottom: 0, right: 0, width: ns(10), height: ns(10), borderRadius: ns(5), borderWidth: 1.5, borderColor: "#FFF" },
+  rowInfo:       { flex: 1, marginLeft: ns(10) },
+  rowName:       { fontSize: ns(14.5), fontFamily: "Comfortaa_700Bold", includeFontPadding: false },
+  pioneerLabel:  { fontSize: ns(10), fontFamily: "Comfortaa_700Bold", marginTop: ns(1), includeFontPadding: false },
+  trophyChip:    { flexDirection: "row", alignItems: "center", paddingHorizontal: ns(10), paddingVertical: ns(6), borderRadius: ns(999), borderWidth: 1, marginLeft: ns(8) },
+  trophyChipText:{ fontSize: ns(13.5), fontFamily: "Comfortaa_700Bold", includeFontPadding: false },
 
-  // Skeleton
-  skelRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: normalizeSize(12), paddingHorizontal: normalizeSize(12), borderRadius: normalizeSize(16), marginVertical: normalizeSize(5), backgroundColor: "rgba(255,255,255,0.05)", overflow: "hidden" },
+  // Empty
+  emptyWrap:     { alignItems: "center", paddingVertical: ns(60), paddingHorizontal: SPACING * 2 },
+  emptyText:     { fontSize: ns(15), fontFamily: "Comfortaa_400Regular", textAlign: "center", lineHeight: ns(22) },
 
-  // Empty / error
-  noPlayersText: { fontSize: normalizeFont(16), fontFamily: "Comfortaa_400Regular", textAlign: "center", padding: SPACING * 1.5 },
-  errorContainer: { alignItems: "center", padding: SPACING * 2.5 },
-  errorText: { fontSize: normalizeFont(15), textAlign: "center", marginBottom: SPACING * 1.5 },
-  settingsButton: { paddingVertical: SPACING * 1.1, paddingHorizontal: SPACING * 2.2, borderRadius: normalizeSize(999), backgroundColor: "rgba(255,255,255,0.12)", overflow: "hidden" },
-  settingsButtonText: { fontSize: normalizeFont(14), fontFamily: "Comfortaa_700Bold" },
+  // Error/location
+  locationMsgWrap:{ alignItems: "center", paddingVertical: ns(20), paddingHorizontal: SPACING * 2 },
+  locationMsg:   { fontSize: ns(14), fontFamily: "Comfortaa_400Regular", textAlign: "center", marginBottom: ns(12) },
+  retryBtn:      { paddingVertical: ns(11), paddingHorizontal: ns(24), borderRadius: ns(999) },
+  retryBtnText:  { fontSize: ns(14), fontFamily: "Comfortaa_700Bold", color: "#FFF" },
 });

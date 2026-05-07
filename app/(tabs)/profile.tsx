@@ -218,7 +218,7 @@ export default function ProfileScreen() {
       setIsLoading(false);
     }, () => { setError(t("profileLoadError")); setIsLoading(false); });
     return () => unsub();
-  }, [profileUpdated, t]);
+  }, [profileUpdated]);
 
   // ── Charge le rapport dès que uid dispo ───────────────────────────────────
   useEffect(() => {

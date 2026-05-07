@@ -2275,12 +2275,9 @@
       "national": "按国家筛选",
       "global": "全球"
     },
-    "tab": {
-      "region": "地区",
-      "national": "全国",
-      "global": "全球",
-      "weekly": "本周"
-    },
+    "tab": { "global": "全球", "national": "全国", "regional": "地区", "weekly": "本周" },
+  "weeklyInfo": "本周获得的奖杯 · 每周一重置",
+  "weeklyEmpty": "本周暂无数据。\n活跃一周后，周一再来查看！",
     "listLabel": "排名玩家列表",
     "noPlayers": "此排行榜暂无玩家。"
   },

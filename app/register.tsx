@@ -451,25 +451,39 @@ const [socialAuthPhoto, setSocialAuthPhoto] = useState<string | null>(null);
 }, [reduceMotion, animateStepTransition]);
 
   // ── Google Sign In ────────────────────────────────────────────────────────
-  const handleGoogleSignIn = useCallback(async () => {
+ const handleGoogleSignIn = useCallback(async () => {
   if (submittingRef.current) return;
   submittingRef.current = true;
   setSocialLoading("google");
   try {
     await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
-try { await GoogleSignin.signOut(); } catch {}
-const userInfo = await GoogleSignin.signIn();
-const { accessToken, idToken } = await GoogleSignin.getTokens();
-if (!idToken) throw new Error("no_id_token");
-const credential = GoogleAuthProvider.credential(idToken, accessToken);
+    try { await GoogleSignin.signOut(); } catch {}
+    const userInfo = await GoogleSignin.signIn();
+    const { accessToken, idToken } = await GoogleSignin.getTokens();
+    if (!idToken) throw new Error("no_id_token");
+    const credential = GoogleAuthProvider.credential(idToken, accessToken);
     socialRegisterPending.current = true;
-const result = await signInWithCredential(auth, credential);
+    const result = await signInWithCredential(auth, credential);
     const user = result.user;
+
+    // FIX: vérifier si le compte existe déjà avec un username
+    const userSnap = await getDoc(doc(db, "users", user.uid));
+    if (userSnap.exists() && userSnap.data()?.username) {
+      // Compte existant → login direct
+      socialRegisterPending.current = false;
+      logEvent("login_google").catch(() => {});
+      InteractionManager.runAfterInteractions(() => {
+        if (isMountedRef.current) router.replace("/");
+      });
+      return;
+    }
+
+    // Nouveau compte → flow username
     logEvent("register_google").catch(() => {});
     afterSocialAuth(user.uid, user.email ?? "", user.photoURL ?? "");
   } catch (error: any) {
-  socialRegisterPending.current = false; // ← ajoute
-  if (error.code === statusCodes.SIGN_IN_CANCELLED || error.code === statusCodes.IN_PROGRESS) {
+    socialRegisterPending.current = false;
+    if (error.code === statusCodes.SIGN_IN_CANCELLED || error.code === statusCodes.IN_PROGRESS) {
       // silencieux
     } else {
       if (isMountedRef.current) showError(t("unknownError") || "Une erreur est survenue.");
@@ -478,7 +492,7 @@ const result = await signInWithCredential(auth, credential);
     submittingRef.current = false;
     if (isMountedRef.current) setSocialLoading(null);
   }
-}, [afterSocialAuth, showError, t]);
+}, [afterSocialAuth, showError, t, router]);
 
   // ── Apple Sign In ─────────────────────────────────────────────────────────
   const handleAppleSignIn = useCallback(async () => {
@@ -500,6 +514,15 @@ const result = await signInWithCredential(auth, credential);
     socialRegisterPending.current = true;
 const result = await signInWithCredential(auth, oauthCredential);
     const user = result.user;
+    const userSnap = await getDoc(doc(db, "users", user.uid));
+if (userSnap.exists() && userSnap.data()?.username) {
+  socialRegisterPending.current = false;
+  logEvent("login_apple").catch(() => {});
+  InteractionManager.runAfterInteractions(() => {
+    if (isMountedRef.current) router.replace("/");
+  });
+  return;
+}
     logEvent("register_apple").catch(() => {});
     afterSocialAuth(user.uid, user.email ?? "", user.photoURL ?? "");
   } catch (error: any) {

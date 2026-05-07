@@ -1074,7 +1074,7 @@ export default function WeeklyReportModal({
 
                 {safeChallenges.map((stat, i) => (
                   <ChallengeRow
-                    key={stat.id}
+                    key={stat.id ?? `challenge-${i}`}
                     stat={stat}
                     isDark={isDark}
                     delay={440 + i * 60}

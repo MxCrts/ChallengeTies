@@ -2265,12 +2265,9 @@
       "national": "Filtra per paese",
       "global": "Globale"
     },
-    "tab": {
-      "region": "Regionale",
-      "national": "Nazionale",
-      "global": "Globale",
-      "weekly": "Questa settimana"
-    },
+     "tab": { "global": "Globale", "national": "Nazionale", "regional": "Regionale", "weekly": "Questa settimana" },
+  "weeklyInfo": "Trofei guadagnati questa settimana · Reset ogni lunedì",
+  "weeklyEmpty": "Nessun dato ancora questa settimana.\nTorna lunedì dopo una settimana attiva!",
     "listLabel": "Elenco dei giocatori classificati",
     "noPlayers": "Nessun giocatore disponibile per questa classifica."
   },

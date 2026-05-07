@@ -70,26 +70,30 @@ export function useOnboardingQuests() {
 
   // ─── Check auto streak ───────────────────────────────────────────────────
 
-  const checkStreakQuest = useCallback(
-    async (userData: any) => {
-      if (!state) return;
-      const already = state.quests.find((q) => q.id === "maintain_3day_streak")?.completed;
-      if (already) return;
+ const checkStreakQuest = useCallback(
+  async (userData: any) => {
+    if (!state) return;
+    const already = state.quests.find((q) => q.id === "maintain_3day_streak")?.completed;
+    if (already) return;
 
-      const streak =
-        userData?.streak ??
-        userData?.streakDays ??
-        userData?.currentStreak?.current ??
-        userData?.currentStreak?.count ??
-        null;
+    // FIX: cherche le streak dans CurrentChallenges comme dans home.tsx
+    const challenges = Array.isArray(userData?.CurrentChallenges)
+      ? userData.CurrentChallenges
+      : [];
+    const activeChallenges = challenges.filter(
+      (c: any) => !c?.completed && !c?.archived
+    );
+    const maxStreak = activeChallenges.reduce(
+      (m: number, c: any) => Math.max(m, typeof c?.streak === "number" ? c.streak : 0),
+      0
+    );
 
-      const streakNum = typeof streak === "number" ? streak : 0;
-      if (streakNum >= 3) {
-        await complete("maintain_3day_streak");
-      }
-    },
-    [state, complete]
-  );
+    if (maxStreak >= 3) {
+      await complete("maintain_3day_streak");
+    }
+  },
+  [state, complete]
+);
 
   // ─── Dismiss ─────────────────────────────────────────────────────────────
 

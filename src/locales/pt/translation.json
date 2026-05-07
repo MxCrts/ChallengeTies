@@ -1658,12 +1658,9 @@
       "national": "Ver jogadores do seu país",
       "global": "Ver todos os jogadores"
     },
-    "tab": {
-      "region": "Regional",
-      "national": "Nacional",
-      "global": "Global",
-      "weekly": "Esta semana"
-    },
+     "tab": { "global": "Global", "national": "Nacional", "regional": "Regional", "weekly": "Esta semana" },
+  "weeklyInfo": "Troféus ganhos esta semana · Reset toda segunda-feira",
+  "weeklyEmpty": "Ainda sem dados esta semana.\nVolte segunda após uma semana ativa!",
     "listLabel": "Lista de jogadores ranqueados",
     "noPlayers": "Nenhum jogador disponível para este ranking."
   },

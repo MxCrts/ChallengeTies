@@ -1647,12 +1647,9 @@
       "national": "내 국가의 플레이어 보기",
       "global": "전체 플레이어 보기"
     },
-    "tab": {
-      "region": "지역",
-      "national": "국가",
-      "global": "전 세계",
-      "weekly": "이번 주"
-    },
+    "tab": { "global": "글로벌", "national": "국가", "regional": "지역", "weekly": "이번 주" },
+  "weeklyInfo": "이번 주 획득한 트로피 · 매주 월요일 초기화",
+  "weeklyEmpty": "이번 주 아직 데이터 없음.\n활성 주 이후 월요일에 다시 확인하세요!",
     "listLabel": "순위 등록 플레이어 목록",
     "noPlayers": "표시할 플레이어가 없습니다."
   },

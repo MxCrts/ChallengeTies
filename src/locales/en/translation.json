@@ -1961,11 +1961,13 @@
       "global": "Global"
     },
     "tab": {
-      "region": "Region",
-      "national": "National",
-      "global": "Global",
-      "weekly": "This week"
-    },
+    "global": "Global",
+    "national": "National",
+    "regional": "Regional",
+    "weekly": "This week"
+  },
+  "weeklyInfo": "Trophies earned this week · Resets every Monday",
+  "weeklyEmpty": "No data yet this week.\nCheck back Monday after an active week!",
     "listLabel": "Ranked players list",
     "noPlayers": "No players available for this leaderboard."
   },

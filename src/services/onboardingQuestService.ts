@@ -206,20 +206,25 @@ export async function completeQuest(questId: QuestId): Promise<OnboardingState> 
     const uid = auth.currentUser?.uid;
 
     if (uid && trophies > 0) {
-      try {
-        const userRef = doc(db, "users", uid);
-        await runTransaction(db, async (tx) => {
-          tx.update(userRef, {
-            trophies: increment(trophies),
-            totalTrophies: increment(trophies),
-            [`onboardingQuests.${questId}`]: true,
-            [`onboardingQuests.${questId}At`]: serverTimestamp(),
-          });
-        });
-      } catch (e) {
-        console.warn("[OnboardingQuest] Firestore transaction failed:", e);
-      }
-    }
+  try {
+    const userRef = doc(db, "users", uid);
+    await runTransaction(db, async (tx) => {
+      const snap = await tx.get(userRef);
+      if (!snap.exists()) return;
+      const data = snap.data() as any;
+      // ✅ Anti double-credit : si la quête est déjà marquée, on ne crédite pas
+      if (data?.onboardingQuests?.[questId] === true) return;
+      tx.update(userRef, {
+        trophies: increment(trophies),
+        totalTrophies: increment(trophies),
+        [`onboardingQuests.${questId}`]: true,
+        [`onboardingQuests.${questId}At`]: serverTimestamp(),
+      });
+    });
+  } catch (e) {
+    console.warn("[OnboardingQuest] Firestore transaction failed:", e);
+  }
+}
   } catch (e) {
     console.warn("[OnboardingQuest] completeQuest error:", e);
   }

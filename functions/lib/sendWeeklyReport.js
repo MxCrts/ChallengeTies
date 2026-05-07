@@ -27,19 +27,40 @@ function getMondayOf(date) {
     d.setDate(d.getDate() - dow);
     return d;
 }
+// ── Génère weekLabel localisé ─────────────────────────────────────────────────
+function formatWeekLabel(mondayDate, lang) {
+    const sunday = new Date(mondayDate);
+    sunday.setDate(mondayDate.getDate() + 6);
+    const locale = lang === "fr" ? "fr-FR" :
+        lang === "de" ? "de-DE" :
+            lang === "es" ? "es-ES" :
+                lang === "it" ? "it-IT" :
+                    lang === "pt" ? "pt-PT" :
+                        lang === "nl" ? "nl-NL" :
+                            lang === "ru" ? "ru-RU" :
+                                lang === "ar" ? "ar-SA" :
+                                    lang === "hi" ? "hi-IN" :
+                                        lang === "zh" ? "zh-CN" :
+                                            lang === "ja" ? "ja-JP" :
+                                                lang === "ko" ? "ko-KR" :
+                                                    "en-US";
+    const fmt = new Intl.DateTimeFormat(locale, { day: "numeric", month: "long" });
+    return `${fmt.format(mondayDate)} – ${fmt.format(sunday)}`;
+}
 // ── Calcul momentum score ─────────────────────────────────────────────────────
-function computeMomentumScore(week0Days, // cette semaine (passée)
-week1Days, // il y a 1 semaine
-week2Days, // il y a 2 semaines
-uniqueChallenges) {
-    // Régularité (40%) — max = 7 jours
-    const regularity = Math.min(week0Days / 7, 1) * 40;
-    // Tendance (35%) — compare les 3 semaines
-    const avg12 = (week1Days + week2Days) / 2 || 1;
-    const trend = Math.min(Math.max(week0Days / avg12, 0), 2); // 0 à 2
-    const trendScore = (trend / 2) * 35;
-    // Intensité (25%) — nombre de défis différents
-    const intensity = Math.min(uniqueChallenges / 3, 1) * 25;
+// FIX: si 0 jours cette semaine → score max 15 (présence passée donne un petit bonus)
+function computeMomentumScore(week0Days, week1Days, week2Days, uniqueChallenges) {
+    // Régularité (50%) — pondéré plus fort, base réelle de la semaine
+    const regularity = Math.min(week0Days / 7, 1) * 50;
+    // Tendance (30%) — seulement si on a marqué cette semaine
+    let trendScore = 0;
+    if (week0Days > 0) {
+        const avg12 = (week1Days + week2Days) / 2 || 1;
+        const trend = Math.min(Math.max(week0Days / avg12, 0), 2);
+        trendScore = (trend / 2) * 30;
+    }
+    // Intensité (20%) — nombre de défis différents, seulement si actif
+    const intensity = week0Days > 0 ? Math.min(uniqueChallenges / 3, 1) * 20 : 0;
     return Math.round(regularity + trendScore + intensity);
 }
 // ── Génère le diagnostic ──────────────────────────────────────────────────────
@@ -50,7 +71,20 @@ function generateDiagnostic(score, prevScore, week0Days, week1Days, streakBroken
     const isStable = !isRising && !isFalling;
     const isConsistent = week0Days >= 5;
     const isIrregular = week0Days >= 3 && week0Days < 5 && week1Days >= 5;
-    // Messages par langue (fr/en, fallback en)
+    // FIX: sélection de langue correcte — toutes les 13 langues
+    const l = lang === "fr" ? "fr" :
+        lang === "de" ? "de" :
+            lang === "es" ? "es" :
+                lang === "it" ? "it" :
+                    lang === "pt" ? "pt" :
+                        lang === "nl" ? "nl" :
+                            lang === "ru" ? "ru" :
+                                lang === "ar" ? "ar" :
+                                    lang === "hi" ? "hi" :
+                                        lang === "zh" ? "zh" :
+                                            lang === "ja" ? "ja" :
+                                                lang === "ko" ? "ko" :
+                                                    "en";
     const msgs = {
         fr: {
             rising_consistent: "Tu construis quelque chose de solide. Chaque jour compte et ça se voit. Continue exactement comme ça.",
@@ -95,7 +129,7 @@ function generateDiagnostic(score, prevScore, week0Days, week1Days, streakBroken
         pt: {
             rising_consistent: "Estás a construir algo sólido. Cada dia conta e isso nota-se. Continua exatamente assim.",
             rising_general: `Progredes semana após semana. ${delta > 0 ? `+${delta} pontos de momentum` : ""} — mantém essa energia.`,
-            falling_broken: "Quebras-te a tua série mas voltaste. Isso é a verdadeira disciplina — não a perfeição, a resiliência.",
+            falling_broken: "Quebraste a tua série mas voltaste. Isso é a verdadeira disciplina — não a perfeição, a resiliência.",
             falling_general: "Esta semana foi mais suave que o habitual. É normal. O importante é não deixar uma má semana chamar outra.",
             stable_consistent: "És regular como um relógio. É exatamente isso que cria resultados duradouros.",
             stable_irregular: "Marcas muito em certos dias mas desapareces noutros. O segredo é a regularidade, não a intensidade.",
@@ -183,8 +217,7 @@ function generateDiagnostic(score, prevScore, week0Days, week1Days, streakBroken
             zero: "Tough week. Let's restart together Monday. Just one day is enough to get the machine going again.",
         },
     };
-    const l = lang.startsWith("fr") ? "fr" : "en";
-    const m = msgs[l];
+    const m = msgs[l] ?? msgs["en"];
     if (week0Days === 0)
         return m.zero;
     if (isRising && isConsistent)
@@ -203,29 +236,80 @@ function generateDiagnostic(score, prevScore, week0Days, week1Days, streakBroken
 }
 // ── Génère l'objectif semaine suivante ───────────────────────────────────────
 function generateGoal(week0Days, weakestDayIndex, lang) {
-    const DAY_NAMES_FR = ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"];
-    const DAY_NAMES_EN = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
-    const dayNames = lang.startsWith("fr") ? DAY_NAMES_FR : DAY_NAMES_EN;
-    // +1 jour si < 6, sinon 7
+    const DAY_NAMES = {
+        fr: ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"],
+        de: ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"],
+        es: ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"],
+        it: ["lunedì", "martedì", "mercoledì", "giovedì", "venerdì", "sabato", "domenica"],
+        pt: ["segunda-feira", "terça-feira", "quarta-feira", "quinta-feira", "sexta-feira", "sábado", "domingo"],
+        nl: ["maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag", "zondag"],
+        ru: ["понедельник", "вторник", "среда", "четверг", "пятница", "суббота", "воскресенье"],
+        ar: ["الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت", "الأحد"],
+        hi: ["सोमवार", "मंगलवार", "बुधवार", "गुरुवार", "शुक्रवार", "शनिवार", "रविवार"],
+        zh: ["周一", "周二", "周三", "周四", "周五", "周六", "周日"],
+        ja: ["月曜日", "火曜日", "水曜日", "木曜日", "金曜日", "土曜日", "日曜日"],
+        ko: ["월요일", "화요일", "수요일", "목요일", "금요일", "토요일", "일요일"],
+        en: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+    };
+    const l = lang === "fr" ? "fr" :
+        lang === "de" ? "de" :
+            lang === "es" ? "es" :
+                lang === "it" ? "it" :
+                    lang === "pt" ? "pt" :
+                        lang === "nl" ? "nl" :
+                            lang === "ru" ? "ru" :
+                                lang === "ar" ? "ar" :
+                                    lang === "hi" ? "hi" :
+                                        lang === "zh" ? "zh" :
+                                            lang === "ja" ? "ja" :
+                                                lang === "ko" ? "ko" :
+                                                    "en";
+    const dayNames = DAY_NAMES[l] ?? DAY_NAMES["en"];
     const target = Math.min(week0Days + 1, 7);
     const weakDay = weakestDayIndex !== null ? dayNames[weakestDayIndex] : null;
-    let message = "";
-    if (lang.startsWith("fr")) {
-        if (weakDay && week0Days >= 3) {
-            message = `Cette semaine : marque au moins ${target} jours — et essaie le ${weakDay}, c'est ton jour le plus faible.`;
-        }
-        else {
-            message = `Cette semaine : marque au moins ${target} jour${target > 1 ? "s" : ""}.`;
-        }
-    }
-    else {
-        if (weakDay && week0Days >= 3) {
-            message = `This week: mark at least ${target} days — and try ${weakDay}, it's your weakest day.`;
-        }
-        else {
-            message = `This week: mark at least ${target} day${target > 1 ? "s" : ""}.`;
-        }
-    }
+    const GOAL_MSGS = {
+        fr: (t, w) => w && week0Days >= 3
+            ? `Cette semaine : marque au moins ${t} jour${t > 1 ? "s" : ""} — et essaie le ${w}, c'est ton jour le plus faible.`
+            : `Cette semaine : marque au moins ${t} jour${t > 1 ? "s" : ""}.`,
+        de: (t, w) => w && week0Days >= 3
+            ? `Diese Woche: mindestens ${t} Tag${t > 1 ? "e" : ""} markieren — und versuche es am ${w}, das ist dein schwächster Tag.`
+            : `Diese Woche: mindestens ${t} Tag${t > 1 ? "e" : ""} markieren.`,
+        es: (t, w) => w && week0Days >= 3
+            ? `Esta semana: marca al menos ${t} día${t > 1 ? "s" : ""} — e intenta el ${w}, es tu día más débil.`
+            : `Esta semana: marca al menos ${t} día${t > 1 ? "s" : ""}.`,
+        it: (t, w) => w && week0Days >= 3
+            ? `Questa settimana: segna almeno ${t} giorn${t > 1 ? "i" : "o"} — e prova il ${w}, è il tuo giorno più debole.`
+            : `Questa settimana: segna almeno ${t} giorn${t > 1 ? "i" : "o"}.`,
+        pt: (t, w) => w && week0Days >= 3
+            ? `Esta semana: marca pelo menos ${t} dia${t > 1 ? "s" : ""} — e tenta a ${w}, é o teu dia mais fraco.`
+            : `Esta semana: marca pelo menos ${t} dia${t > 1 ? "s" : ""}.`,
+        nl: (t, w) => w && week0Days >= 3
+            ? `Deze week: markeer minimaal ${t} dag${t > 1 ? "en" : ""} — en probeer op ${w}, dat is je zwakste dag.`
+            : `Deze week: markeer minimaal ${t} dag${t > 1 ? "en" : ""}.`,
+        ru: (t, w) => w && week0Days >= 3
+            ? `На этой неделе: отметь хотя бы ${t} ${t === 1 ? "день" : t < 5 ? "дня" : "дней"} — и попробуй в ${w}, это твой самый слабый день.`
+            : `На этой неделе: отметь хотя бы ${t} ${t === 1 ? "день" : t < 5 ? "дня" : "дней"}.`,
+        ar: (t, w) => w && week0Days >= 3
+            ? `هذا الأسبوع: سجّل ${t} ${t === 1 ? "يوماً" : "أيام"} على الأقل — وحاول يوم ${w}، هو يومك الأضعف.`
+            : `هذا الأسبوع: سجّل ${t} ${t === 1 ? "يوماً" : "أيام"} على الأقل.`,
+        hi: (t, w) => w && week0Days >= 3
+            ? `इस हफ्ते: कम से कम ${t} दिन मार्क करो — और ${w} को जरूर करो, यह तुम्हारा सबसे कमजोर दिन है।`
+            : `इस हफ्ते: कम से कम ${t} दिन मार्क करो।`,
+        zh: (t, w) => w && week0Days >= 3
+            ? `本周：至少标记 ${t} 天 — 试着在${w}也完成，那是你最薄弱的一天。`
+            : `本周：至少标记 ${t} 天。`,
+        ja: (t, w) => w && week0Days >= 3
+            ? `今週：少なくとも${t}日マークしましょう — ${w}も試してみてください、最も弱い日です。`
+            : `今週：少なくとも${t}日マークしましょう。`,
+        ko: (t, w) => w && week0Days >= 3
+            ? `이번 주: 최소 ${t}일 표시하세요 — ${w}도 시도해보세요, 가장 약한 날입니다.`
+            : `이번 주: 최소 ${t}일 표시하세요.`,
+        en: (t, w) => w && week0Days >= 3
+            ? `This week: mark at least ${t} day${t > 1 ? "s" : ""} — and try ${w}, it's your weakest day.`
+            : `This week: mark at least ${t} day${t > 1 ? "s" : ""}.`,
+    };
+    const fn = GOAL_MSGS[l] ?? GOAL_MSGS["en"];
+    const message = fn(target, weakDay);
     return { target, weakDay, message };
 }
 // ── Cloud Function principale ─────────────────────────────────────────────────
@@ -236,37 +320,33 @@ exports.sendWeeklyReport = (0, scheduler_1.onSchedule)({
 }, async () => {
     const now = new Date();
     const thisMonday = getMondayOf(now);
-    // Semaine passée = lundi précédent
     const lastMonday = new Date(thisMonday);
     lastMonday.setDate(thisMonday.getDate() - 7);
     const twoWeeksAgo = new Date(thisMonday);
     twoWeeksAgo.setDate(thisMonday.getDate() - 14);
     const threeWeeksAgo = new Date(thisMonday);
     threeWeeksAgo.setDate(thisMonday.getDate() - 21);
-    const week0Keys = new Set(getWeekDays(lastMonday)); // semaine passée
-    const week1Keys = new Set(getWeekDays(twoWeeksAgo)); // il y a 2 sem
-    const week2Keys = new Set(getWeekDays(threeWeeksAgo)); // il y a 3 sem
-    const weekId = toDateKey(lastMonday); // clé du rapport = lundi de la semaine passée
-    // Cutoff : actif dans les 21 derniers jours
+    const week0Keys = new Set(getWeekDays(lastMonday));
+    const week1Keys = new Set(getWeekDays(twoWeeksAgo));
+    const week2Keys = new Set(getWeekDays(threeWeeksAgo));
+    const weekId = toDateKey(lastMonday);
     const cutoff = firestore_1.Timestamp.fromDate(threeWeeksAgo);
-    // Récupère tous les users actifs (on filtre via les CurrentChallenges)
     const usersSnap = await db.collection("users")
         .where("updatedAt", ">=", cutoff)
         .get();
-    console.log(`[sendWeeklyReport] ${usersSnap.size} users actifs à traiter`);
+    console.log(`[sendWeeklyReport] ${usersSnap.size} users à traiter`);
     const tasks = [];
     for (const userDoc of usersSnap.docs) {
         tasks.push((async () => {
             try {
                 const uid = userDoc.id;
                 const data = userDoc.data();
-                // Déjà envoyé cette semaine ?
                 const reportRef = db.collection("users").doc(uid)
                     .collection("weeklyReports").doc(weekId);
                 const existing = await reportRef.get();
                 if (existing.exists)
                     return;
-                const lang = data.language || "fr";
+                const lang = (data.language || "fr").split("-")[0]; // normalise "fr-FR" → "fr"
                 const fcmToken = data.fcmToken || data.expoPushToken;
                 // ── Collecte les completionDates ──────────────────────────────
                 const allChallenges = [
@@ -275,9 +355,35 @@ exports.sendWeeklyReport = (0, scheduler_1.onSchedule)({
                 ];
                 const dateKeys = [];
                 const challengesByDate = {};
+                // Stats par challenge pour le rapport
+                const challengeStatsMap = {};
                 allChallenges.forEach((ch) => {
                     const cid = ch?.challengeId || ch?.id || "unknown";
                     const dates = Array.isArray(ch?.completionDates) ? ch.completionDates : [];
+                    // Stats challenge
+                    const markedThisWeek = dates.filter((raw) => {
+                        let key = "";
+                        if (raw && typeof raw === "object" && typeof raw.seconds === "number") {
+                            key = toDateKey(new Date(raw.seconds * 1000));
+                        }
+                        else if (typeof raw === "string") {
+                            key = raw.slice(0, 10);
+                        }
+                        return week0Keys.has(key);
+                    }).length;
+                    if (!challengeStatsMap[cid]) {
+                        challengeStatsMap[cid] = {
+                            title: ch?.title || ch?.chatId || cid,
+                            category: ch?.category || "",
+                            markedThisWeek,
+                            totalDays: ch?.selectedDays || 0,
+                            completedDays: ch?.completedDays || 0,
+                            streak: ch?.streak || 0,
+                            isDuo: ch?.duo === true,
+                            partnerName: ch?.partnerName || undefined,
+                            partnerMarkedThisWeek: undefined,
+                        };
+                    }
                     dates.forEach((raw) => {
                         let key = "";
                         if (raw && typeof raw === "object" && typeof raw.seconds === "number") {
@@ -303,16 +409,22 @@ exports.sendWeeklyReport = (0, scheduler_1.onSchedule)({
                 // Aucune activité dans les 3 semaines → skip
                 if (week0MarkedDays.length === 0 && week1Days === 0 && week2Days === 0)
                     return;
+                // markedDaysBits [L,M,M,J,V,S,D]
+                const markedDaysBits = Array(7).fill(false);
+                week0MarkedDays.forEach(k => {
+                    const d = new Date(k);
+                    const dow = (d.getDay() + 6) % 7;
+                    markedDaysBits[dow] = true;
+                });
                 // Défis uniques cette semaine
                 const uniqueChallengesThisWeek = new Set(week0MarkedDays.flatMap(k => [...(challengesByDate[k] || [])])).size;
-                // Jour le plus faible (moins de marquages cette semaine)
+                // Jour le plus faible
                 const dayCount = Array(7).fill(0);
                 week0MarkedDays.forEach(k => {
                     const d = new Date(k);
                     const dow = (d.getDay() + 6) % 7;
                     dayCount[dow]++;
                 });
-                // Jour le plus faible parmi ceux où on a marqué au moins 1 fois dans les 3 sem
                 let weakestDayIndex = null;
                 let minCount = Infinity;
                 dayCount.forEach((c, i) => {
@@ -321,31 +433,41 @@ exports.sendWeeklyReport = (0, scheduler_1.onSchedule)({
                         weakestDayIndex = i;
                     }
                 });
-                // Streak cassé cette semaine ?
                 const streakBrokenThisWeek = week1Days > 0 && week0MarkedDays.length === 0;
                 // ── Scores ───────────────────────────────────────────────────
                 const score = computeMomentumScore(week0MarkedDays.length, week1Days, week2Days, uniqueChallengesThisWeek);
-                // Score semaine précédente (approximation)
                 const prevScore = computeMomentumScore(week1Days, week2Days, week2Days, 1);
                 // ── Diagnostic + objectif ─────────────────────────────────────
                 const diagnostic = generateDiagnostic(score, prevScore, week0MarkedDays.length, week1Days, streakBrokenThisWeek, lang);
                 const goal = generateGoal(week0MarkedDays.length, weakestDayIndex, lang);
+                // ── weekLabel localisé ────────────────────────────────────────
+                const weekLabel = formatWeekLabel(lastMonday, lang);
                 // ── Trophées de la semaine ────────────────────────────────────
                 const weeklyTrophies = Array.isArray(data.weeklyTrophies)
                     ? (data.weeklyTrophies.slice(-1)[0] || 0)
                     : 0;
-                // ── Sauvegarde du rapport ─────────────────────────────────────
+                // ── Best streak cette semaine ─────────────────────────────────
+                const bestStreak = Math.max(0, ...Object.values(challengeStatsMap).map(c => c.streak || 0));
+                // ── Challenges pour le rapport ────────────────────────────────
+                const challenges = Object.entries(challengeStatsMap)
+                    .filter(([, c]) => c.markedThisWeek > 0 || c.completedDays > 0)
+                    .map(([id, c]) => ({ id, ...c }));
+                // ── Sauvegarde du rapport — champs alignés avec WeeklyReportData ─
                 const report = {
                     weekId,
+                    weekLabel,
                     createdAt: firestore_1.Timestamp.now(),
                     score,
                     prevScore,
                     delta: score - prevScore,
-                    markedDays: week0MarkedDays.length,
+                    totalMarked: week0MarkedDays.length,
                     trophiesThisWeek: weeklyTrophies,
+                    bestStreak,
+                    markedDaysBits,
+                    challenges,
                     diagnostic,
-                    goal: goal.message,
-                    goalTarget: goal.target,
+                    weekGoal: goal.message, // FIX: weekGoal (pas goal)
+                    weekGoalTarget: goal.target, // FIX: weekGoalTarget (pas goalTarget)
                     goalWeakDay: goal.weakDay,
                     seen: false,
                 };
@@ -353,28 +475,33 @@ exports.sendWeeklyReport = (0, scheduler_1.onSchedule)({
                 // ── Notification push ─────────────────────────────────────────
                 if (!fcmToken)
                     return;
-                const notifTitle = lang.startsWith("fr")
-                    ? `Ton bilan de la semaine 📊`
-                    : `Your weekly report 📊`;
-                const notifBody = lang.startsWith("fr")
-                    ? `Score momentum : ${score}/100 · ${week0MarkedDays.length} jours actifs`
-                    : `Momentum score: ${score}/100 · ${week0MarkedDays.length} active days`;
+                const NOTIF = {
+                    fr: { title: "Ton bilan de la semaine 📊", body: (s, d) => `Score momentum : ${s}/100 · ${d} jour${d > 1 ? "s" : ""} actif${d > 1 ? "s" : ""}` },
+                    de: { title: "Dein Wochenbericht 📊", body: (s, d) => `Momentum-Score: ${s}/100 · ${d} aktive${d > 1 ? "" : "r"} Tag${d > 1 ? "e" : ""}` },
+                    es: { title: "Tu informe semanal 📊", body: (s, d) => `Puntuación momentum: ${s}/100 · ${d} día${d > 1 ? "s" : ""} activo${d > 1 ? "s" : ""}` },
+                    it: { title: "Il tuo report settimanale 📊", body: (s, d) => `Score momentum: ${s}/100 · ${d} giorn${d > 1 ? "i" : "o"} attiv${d > 1 ? "i" : "o"}` },
+                    pt: { title: "O teu relatório semanal 📊", body: (s, d) => `Score momentum: ${s}/100 · ${d} dia${d > 1 ? "s" : ""} ativo${d > 1 ? "s" : ""}` },
+                    nl: { title: "Jouw wekelijks rapport 📊", body: (s, d) => `Momentumscore: ${s}/100 · ${d} actieve dag${d > 1 ? "en" : ""}` },
+                    ru: { title: "Твой недельный отчёт 📊", body: (s, d) => `Моментум: ${s}/100 · ${d} активн${d === 1 ? "ый день" : d < 5 ? "ых дня" : "ых дней"}` },
+                    ar: { title: "تقريرك الأسبوعي 📊", body: (s, d) => `نقاط الزخم: ${s}/100 · ${d} ${d === 1 ? "يوم نشط" : "أيام نشطة"}` },
+                    hi: { title: "तुम्हारी साप्ताहिक रिपोर्ट 📊", body: (s, d) => `मोमेंटम स्कोर: ${s}/100 · ${d} सक्रिय दिन` },
+                    zh: { title: "你的每周报告 📊", body: (s, d) => `动力分数：${s}/100 · ${d} 天活跃` },
+                    ja: { title: "週次レポート 📊", body: (s, d) => `モメンタムスコア：${s}/100 · ${d}日間アクティブ` },
+                    ko: { title: "주간 보고서 📊", body: (s, d) => `모멘텀 점수: ${s}/100 · ${d}일 활성` },
+                    en: { title: "Your weekly report 📊", body: (s, d) => `Momentum score: ${s}/100 · ${d} active day${d > 1 ? "s" : ""}` },
+                };
+                const notif = NOTIF[lang] ?? NOTIF["en"];
                 await (0, messaging_1.getMessaging)().send({
                     token: fcmToken,
-                    notification: { title: notifTitle, body: notifBody },
-                    data: {
-                        type: "weekly_report",
-                        weekId,
-                        score: String(score),
+                    notification: {
+                        title: notif.title,
+                        body: notif.body(score, week0MarkedDays.length),
                     },
-                    apns: {
-                        payload: { aps: { sound: "default", badge: 1 } },
-                    },
-                    android: {
-                        notification: { sound: "default", channelId: "default" },
-                    },
+                    data: { type: "weekly_report", weekId, score: String(score) },
+                    apns: { payload: { aps: { sound: "default", badge: 1 } } },
+                    android: { notification: { sound: "default", channelId: "default" } },
                 });
-                console.log(`[sendWeeklyReport] ✅ ${uid} → score=${score}, days=${week0MarkedDays.length}`);
+                console.log(`[sendWeeklyReport] ✅ ${uid} → score=${score}, days=${week0MarkedDays.length}, lang=${lang}`);
             }
             catch (err) {
                 console.error(`[sendWeeklyReport] ❌ ${userDoc.id}:`, err);
