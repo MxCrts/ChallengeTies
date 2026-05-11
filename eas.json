@@ -17,11 +17,14 @@
       "ios": { "simulator": false }
     },
     "production": {
-      "distribution": "store",
-      "autoIncrement": true,
-      "android": { "buildType": "app-bundle" },
-      "ios": { "simulator": false }                
-    },
+  "distribution": "store",
+  "autoIncrement": true,
+  "android": { "buildType": "app-bundle" },
+  "ios": { 
+    "simulator": false,
+    "image": "macos-sequoia-15.5-xcode-26.0"
+  }
+},
     "simulator": {
       "ios": {
         "simulator": true
