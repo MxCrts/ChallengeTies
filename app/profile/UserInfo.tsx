@@ -425,117 +425,79 @@ setSelectedCategories(normalized);
 
   // Sélection de l'image
   const pickImage = useCallback(async () => {
-    try {
-      const { status } =
-        await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== "granted") {
-        showToast("error", String(t("photoPermissionDenied")));
+  try {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"] as any,
+      allowsEditing: false,
+      quality: 0.5,
+      allowsMultipleSelection: false,
+      exif: false,
+    });
+
+    if (!result.canceled && result.assets?.[0]?.uri) {
+      const uri = result.assets[0].uri;
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
+        showToast("error", String(t("userNotAuthenticated")));
         return;
       }
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ["images"] as any,
-        allowsEditing: false,
-        quality: 0.5,
-        allowsMultipleSelection: false,
-        exif: false,
+      setIsLoading(true);
+      const filename = `profileImages/${currentUser.uid}_${Date.now()}.jpg`;
+      const storageRef = ref(storage, filename);
+      const response = await fetch(uri);
+      const blob = await response.blob();
+      const uploadTask = uploadBytesResumable(storageRef, blob, {
+        contentType: "image/jpeg",
       });
-      console.log("🖼️ picker result:", JSON.stringify({
-        canceled: result.canceled,
-        assetsCount: result.assets?.length,
-        firstUri: result.assets?.[0]?.uri?.substring(0, 80),
-      }));
-      console.log("🖼️ picker result:", JSON.stringify({
-        canceled: result.canceled,
-        assetsCount: result.assets?.length,
-        firstUri: result.assets?.[0]?.uri?.substring(0, 80),
-      }));
-      if (!result.canceled && result.assets?.[0]?.uri) {
-        const uri = result.assets[0].uri;
-        const currentUser = auth.currentUser;
-        if (!currentUser) {
-          showToast("error", String(t("userNotAuthenticated")));
-          return;
-        }
-        setIsLoading(true);
-        const filename = `profileImages/${currentUser.uid}_${Date.now()}.jpg`;
-        const storageRef = ref(storage, filename);
-        const response = await fetch(uri);
-        const blob = await response.blob();
-        const uploadTask = uploadBytesResumable(storageRef, blob, {
-          contentType: "image/jpeg",
-        });
 
-        uploadTask.on(
-          "state_changed",
-          (snapshot) => {
-            console.log("📤 Upload progress:", snapshot.bytesTransferred, "/", snapshot.totalBytes, "state:", snapshot.state);
-          },
-          (error) => {
-            setIsLoading(false);
-            console.error("❌ Upload error code:", error.code);
-            console.error("❌ Upload error message:", error.message);
-            console.error("❌ Upload error full:", JSON.stringify(error));
-            showToast(
-              "error",
-              `${t("uploadFailed")}: ${error?.message ?? ""}`
-            );
-          },
-          async () => {
-            try {
-              const downloadURL = await getDownloadURL(
-                uploadTask.snapshot.ref
-              );
-              setProfileImage(downloadURL);
-              // ✅ Save avec retry anti-precondition
-              const uid = auth.currentUser?.uid;
-              if (uid) {
-                const userRef = doc(db, "users", uid);
-                let saved = false;
-                for (let attempt = 0; attempt < 5; attempt++) {
-                  try {
-                    const { setDoc } = await import("firebase/firestore");
-                    await setDoc(userRef, {
-                      profileImage: downloadURL,
-                      updatedAt: serverTimestamp(),
-                    }, { merge: true });
-                    console.log("✅ profileImage saved with setDoc merge");
-                    saved = true;
-                    console.log("✅ profileImage saved attempt", attempt + 1);
-                    break;
-                  } catch (e: any) {
-                    console.warn(`⚠️ attempt ${attempt + 1} failed:`, e?.code);
-                    if (e?.code === "failed-precondition") {
-                      await new Promise(r => setTimeout(r, 200 + attempt * 300));
-                    } else {
-                      break;
-                    }
-                  }
-                }
-                if (saved) {
-                  setUser(prev => prev ? { ...prev, profileImage: downloadURL } : prev);
-                } else {
-                  console.error("❌ profileImage save failed after 5 attempts");
+      uploadTask.on(
+        "state_changed",
+        () => {},
+        (error) => {
+          setIsLoading(false);
+          showToast("error", `${t("uploadFailed")}: ${error?.message ?? ""}`);
+        },
+        async () => {
+          try {
+            const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+            setProfileImage(downloadURL);
+            const uid = auth.currentUser?.uid;
+            if (uid) {
+              const userRef = doc(db, "users", uid);
+              let saved = false;
+              for (let attempt = 0; attempt < 5; attempt++) {
+                try {
+                  const { setDoc } = await import("firebase/firestore");
+                  await setDoc(userRef, {
+                    profileImage: downloadURL,
+                    updatedAt: serverTimestamp(),
+                  }, { merge: true });
+                  saved = true;
+                  break;
+                } catch (e: any) {
+                  if (e?.code === "failed-precondition" && attempt < 4) {
+                    await new Promise(r => setTimeout(r, 200 + attempt * 300));
+                  } else break;
                 }
               }
-              setIsLoading(false);
-              showToast("success", String(t("profileImageUpdated")));
-            } catch (urlError: any) {
-              setIsLoading(false);
-              console.error("URL error:", urlError);
-              showToast(
-                "error",
-                `${t("uploadFailed")}: ${urlError?.message ?? ""}`
-              );
+              if (saved) {
+                setUser(prev => prev ? { ...prev, profileImage: downloadURL } : prev);
+              }
             }
+            setIsLoading(false);
+            showToast("success", String(t("profileImageUpdated")));
+          } catch (urlError: any) {
+            setIsLoading(false);
+            showToast("error", `${t("uploadFailed")}: ${urlError?.message ?? ""}`);
           }
-        );
-      }
-    } catch (error: any) {
-      setIsLoading(false);
-      console.error("pickImage error:", error);
-      showToast("error", `${t("uploadFailed")}: ${error?.message ?? ""}`);
+        }
+      );
     }
-  }, [t, showToast]);
+  } catch (error: any) {
+    setIsLoading(false);
+    showToast("error", `${t("uploadFailed")}: ${error?.message ?? ""}`);
+  }
+}, [t, showToast]);
 
   // Sauvegarde des modifications
  const handleSave = useCallback(async () => {

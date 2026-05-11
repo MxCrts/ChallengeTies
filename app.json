@@ -56,18 +56,14 @@
       "softwareKeyboardLayoutMode": "resize",
       "package": "com.mxcrts.ChallengeTies",
       "permissions": [
-        "android.permission.RECEIVE_BOOT_COMPLETED",
-        "android.permission.VIBRATE",
-        "com.google.android.c2dm.permission.RECEIVE",
-        "com.google.android.gms.permission.AD_ID",
-        "android.permission.POST_NOTIFICATIONS",
-        "com.android.vending.BILLING",
-        "android.permission.READ_MEDIA_IMAGES",
-        "android.permission.READ_EXTERNAL_STORAGE",
-        "android.permission.WRITE_EXTERNAL_STORAGE",
-        "android.permission.CAMERA",
-        "android.permission.RECORD_AUDIO"
-      ],
+  "android.permission.RECEIVE_BOOT_COMPLETED",
+  "android.permission.VIBRATE",
+  "com.google.android.c2dm.permission.RECEIVE",
+  "com.google.android.gms.permission.AD_ID",
+  "android.permission.POST_NOTIFICATIONS",
+  "com.android.vending.BILLING",
+  "android.permission.CAMERA"
+],
       "googleServicesFile": "./google-services.json",
       "intentFilters": [
         {
