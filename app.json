@@ -19,10 +19,10 @@
       "googleServicesFile": "./GoogleService-Info.plist",
       "usesAppleSignIn": true,
       "associatedDomains": [
-  "applinks:challengeties.app",
-  "applinks:www.challengeties.app",
-  "applinks:links.challengeties.app"
-],
+        "applinks:challengeties.app",
+        "applinks:www.challengeties.app",
+        "applinks:links.challengeties.app"
+      ],
       "infoPlist": {
         "UIBackgroundModes": [
           "remote-notification"
@@ -33,17 +33,17 @@
           "itms"
         ],
         "GADApplicationIdentifier": "ca-app-pub-4725616526467159~9688398116",
-        "NSUserTrackingUsageDescription": "Votre identifiant peut être utilisé pour des publicités plus pertinentes afin de soutenir l'app.",
+        "NSUserTrackingUsageDescription": "Votre identifiant peut etre utilise pour des publicites plus pertinentes afin de soutenir l'app.",
         "SKAdNetworkItems": [
           {
             "SKAdNetworkIdentifier": "cstr6suwn9.skadnetwork"
           }
         ],
-        "NSPhotoLibraryUsageDescription": "Nous avons besoin d'accéder à votre photothèque pour choisir une photo de profil.",
-        "NSCameraUsageDescription": "Nous avons besoin d'accéder à la caméra pour prendre une photo de profil.",
+        "NSPhotoLibraryUsageDescription": "Nous avons besoin d'acceder a votre phototheque pour choisir une photo de profil.",
+        "NSCameraUsageDescription": "Nous avons besoin d'acceder a la camera pour prendre une photo de profil.",
         "NSPhotoLibraryAddUsageDescription": "Autorisez l'ajout de photos pour enregistrer votre image de profil et votre carte de parrainage.",
-        "NSLocationWhenInUseUsageDescription": "Nous utilisons votre position pour afficher du contenu et des défis proches de vous.",
-        "NSLocationAlwaysAndWhenInUseUsageDescription": "Nous utilisons votre position pour améliorer votre expérience, même quand l'app est en arrière-plan.",
+        "NSLocationWhenInUseUsageDescription": "Nous utilisons votre position pour afficher du contenu et des defis proches de vous.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Nous utilisons votre position pour ameliorer votre experience, meme quand l'app est en arriere-plan.",
         "ITSAppUsesNonExemptEncryption": false
       }
     },
@@ -56,41 +56,16 @@
       "softwareKeyboardLayoutMode": "resize",
       "package": "com.mxcrts.ChallengeTies",
       "permissions": [
-  "android.permission.RECEIVE_BOOT_COMPLETED",
-  "android.permission.VIBRATE",
-  "com.google.android.c2dm.permission.RECEIVE",
-  "com.google.android.gms.permission.AD_ID",
-  "android.permission.POST_NOTIFICATIONS",
-  "com.android.vending.BILLING",
-  "android.permission.CAMERA"
-],
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "android.permission.VIBRATE",
+        "com.google.android.c2dm.permission.RECEIVE",
+        "com.google.android.gms.permission.AD_ID",
+        "android.permission.POST_NOTIFICATIONS",
+        "com.android.vending.BILLING",
+        "android.permission.CAMERA"
+      ],
       "googleServicesFile": "./google-services.json",
       "intentFilters": [
-        {
-          "action": "VIEW",
-          "autoVerify": true,
-          "data": [
-            {
-              "scheme": "https",
-              "host": "challengeties.app",
-              "pathPrefix": "/challenge-details"
-            },
-            {
-              "scheme": "https",
-              "host": "challengeties.app",
-              "pathPrefix": "/challenge"
-            },
-            {
-              "scheme": "https",
-              "host": "links.challengeties.app",
-              "pathPrefix": "/i"
-            }
-          ],
-          "category": [
-            "BROWSABLE",
-            "DEFAULT"
-          ]
-        },
         {
           "action": "VIEW",
           "autoVerify": true,
@@ -128,6 +103,11 @@
       [
         "expo-build-properties",
         {
+          "android": {
+            "compileSdkVersion": 35,
+            "targetSdkVersion": 35,
+            "minSdkVersion": 24
+          },
           "ios": {
             "useModularHeaders": true,
             "extraPods": [
@@ -180,15 +160,16 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Accéder à vos photos pour choisir une image de profil.",
-          "cameraPermission": "Accéder à l'appareil photo pour prendre une photo de profil."
+          "photosPermission": "Acceder a vos photos pour choisir une image de profil.",
+          "cameraPermission": "Acceder a l'appareil photo pour prendre une photo de profil.",
+          "isAccessMediaLocationEnabled": false
         }
       ],
       "expo-mail-composer",
       "expo-iap",
       "expo-tracking-transparency",
       "expo-apple-authentication",
-["@react-native-google-signin/google-signin"]
+      ["@react-native-google-signin/google-signin"]
     ],
     "newArchEnabled": false,
     "experiments": {
