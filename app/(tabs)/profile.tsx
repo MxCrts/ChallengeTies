@@ -408,28 +408,53 @@ export default function ProfileScreen() {
               </Text>
 
               {userData?.challengeCategories && userData.challengeCategories.filter(Boolean).length > 0 ? (
-                <View style={s.interestsRow}>
-                  {userData.challengeCategories.filter(Boolean).slice(0, 4).map((cat, i) => (
-                    <View key={i} style={[s.interestPill, {
-                      borderColor: withAlpha(primaryColor, isDarkMode ? 0.35 : 0.25),
-                      backgroundColor: withAlpha(primaryColor, isDarkMode ? 0.10 : 0.07),
-                    }]}>
-                      <Text style={[s.interestPillText, { color: isDarkMode ? primaryColor : "#C86A00" }]} numberOfLines={1}>
-                        {t(`userInfo.category.${CATEGORY_SLUG_MAP[String(cat).trim()] ?? String(cat).trim()}`, { defaultValue: String(cat).trim() })}
-                      </Text>
-                    </View>
-                  ))}
-                  {userData.challengeCategories.filter(Boolean).length > 4 && (
-                    <View style={[s.interestPill, {
-                      borderColor: withAlpha(primaryColor, 0.20),
-                      backgroundColor: withAlpha(primaryColor, 0.06),
-                    }]}>
-                      <Text style={[s.interestPillText, { color: textSecondary }]}>
-                        +{userData.challengeCategories.filter(Boolean).length - 4}
-                      </Text>
-                    </View>
-                  )}
-                </View>
+  <View style={s.interestsRow}>
+    {userData.challengeCategories.filter(Boolean).slice(0, 4).map((cat, i) => {
+      // Firestore stocke des slugs ("personal_growth", "motivation")
+      // On les mappe vers le label FR qui correspond aux clés i18n
+      const SLUG_TO_I18N_KEY: Record<string, string> = {
+        health: "Santé",
+        creativity: "Créativité",
+        education: "Éducation",
+        motivation: "Motivation",
+        career: "Carrière",
+        productivity: "Productivité",
+        mindset: "État d'esprit",
+        discipline: "Discipline",
+        personal_growth: "Développement Personnel",
+        fitness: "Fitness",
+        lifestyle: "Mode de Vie",
+        ecology: "Écologie",
+        social: "Social",
+        finance: "Finance",
+      };
+      const raw = String(cat).trim();
+      // Cherche dans slug→label, si pas trouvé c'est peut-être déjà un label FR
+      const i18nKey = SLUG_TO_I18N_KEY[raw] ?? raw;
+      const label = t(`categories.${i18nKey}`, { defaultValue: i18nKey });
+
+      return (
+        <View key={i} style={[s.interestPill, {
+          borderColor: withAlpha(primaryColor, isDarkMode ? 0.35 : 0.25),
+          backgroundColor: withAlpha(primaryColor, isDarkMode ? 0.10 : 0.07),
+        }]}>
+          <Text style={[s.interestPillText, { color: isDarkMode ? primaryColor : "#C86A00" }]} numberOfLines={1}>
+            {label}
+          </Text>
+        </View>
+      );
+    })}
+    {userData.challengeCategories.filter(Boolean).length > 4 && (
+      <View style={[s.interestPill, {
+        borderColor: withAlpha(primaryColor, 0.20),
+        backgroundColor: withAlpha(primaryColor, 0.06),
+      }]}>
+        <Text style={[s.interestPillText, { color: textSecondary }]}>
+          +{userData.challengeCategories.filter(Boolean).length - 4}
+        </Text>
+      </View>
+    )}
+  </View>
               ) : (
                 <TouchableOpacity
                   onPress={() => router.push("profile/UserInfo")}

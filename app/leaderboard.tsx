@@ -21,8 +21,10 @@ import {
   orderBy,
   limit,
   getDocs,
+  where,
   doc,
   getDoc,
+  getCountFromServer,
 } from "firebase/firestore";
 import { db, auth } from "@/constants/firebase-config";
 import { useRouter } from "expo-router";
@@ -116,6 +118,7 @@ export default function LeaderboardScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [locationMsg, setLocationMsg] = useState<string | null>(null);
+  const [exactRank, setExactRank] = useState<number | null>(null);
 
   const { ref: rankShareRef, share: shareRankCard } = useShareCard();
   const [rankSharePayload, setRankSharePayload] = useState<{
@@ -173,25 +176,42 @@ export default function LeaderboardScreen() {
       }));
       setWeeklyPlayers(weekly);
 
-      // Current user
-      const uid = auth.currentUser?.uid;
-      if (uid) {
-        const uSnap = await getDoc(doc(db, "users", uid));
-        if (uSnap.exists()) {
-          const d = uSnap.data();
-          const found = global.find((p) => p.id === uid) ?? {
-            id: uid,
-            username: d.username ?? "?",
-            trophies: d.trophies ?? 0,
-            profileImage: d.profileImage ?? undefined,
-            country: d.country ?? "",
-            region: d.region ?? "",
-            isPioneer: !!d.isPioneer,
-          };
-          setCurrentUser(found);
-          if (!d.locationEnabled) setLocationMsg(t("leaderboard.locationDisabled"));
-        }
-      }
+      // Current user + rang exact
+const uid = auth.currentUser?.uid;
+if (uid) {
+  const uSnap = await getDoc(doc(db, "users", uid));
+  if (uSnap.exists()) {
+    const d = uSnap.data();
+    const myTrophies: number = d.trophies ?? 0;
+
+    const found = global.find((p) => p.id === uid) ?? {
+      id: uid,
+      username: d.username ?? "?",
+      trophies: myTrophies,
+      profileImage: d.profileImage ?? undefined,
+      country: d.country ?? "",
+      region: d.region ?? "",
+      isPioneer: !!d.isPioneer,
+    };
+    setCurrentUser(found);
+    if (!d.locationEnabled) setLocationMsg(t("leaderboard.locationDisabled"));
+
+    // Rang exact : compte combien d'users ont PLUS de trophées
+    try {
+      const rankQuery = query(
+        collection(db, "users"),
+        where("trophies", ">", myTrophies)
+      );
+      const snapshot = await getCountFromServer(rankQuery);
+      const rank = snapshot.data().count + 1; // +1 car rank 1 = 0 users devant toi
+      setExactRank(rank);
+    } catch {
+      // Fallback : position dans le top 20 si getCountFromServer échoue
+      const fallbackIdx = global.findIndex((p) => p.id === uid);
+      setExactRank(fallbackIdx >= 0 ? fallbackIdx + 1 : null);
+    }
+  }
+}
     } catch {
       setLocationMsg(t("leaderboard.errorFetch"));
     } finally {
@@ -361,15 +381,16 @@ export default function LeaderboardScreen() {
               {/* My rank card */}
               {currentUser && (
                 <MyRankCard
-                  currentUser={currentUser}
-                  displayPlayers={displayPlayers}
-                  tab={tab}
-                  isDark={isDark}
-                  C={C}
-                  i18nLang={i18n.language}
-                  onShare={shareMyRank}
-                  t={t}
-                />
+    currentUser={currentUser}
+    displayPlayers={displayPlayers}
+    exactRank={exactRank}
+    tab={tab}
+    isDark={isDark}
+    C={C}
+    i18nLang={i18n.language}
+    onShare={shareMyRank}
+    t={t}
+  />
               )}
 
               {/* Rows 4-20 */}
@@ -535,17 +556,21 @@ function PodiumSection({
 // ─── My Rank Card ─────────────────────────────────────────────────────────────
 
 function MyRankCard({
-  currentUser, displayPlayers, tab, isDark, C, i18nLang, onShare, t,
+  currentUser, displayPlayers, exactRank, tab, isDark, C, i18nLang, onShare, t,
 }: {
-  currentUser: Player; displayPlayers: Player[]; tab: Tab;
+  currentUser: Player; displayPlayers: Player[]; exactRank: number | null; tab: Tab;
   isDark: boolean; C: any; i18nLang: string;
   onShare: () => void; t: (k: string, o?: any) => string;
 }) {
-  const idx   = displayPlayers.findIndex((p) => p.id === currentUser.id);
-  const myRank = idx >= 0 ? idx + 1 : undefined;
   const trophyVal = tab === "weekly"
     ? (currentUser.weeklyTrophies ?? 0)
     : currentUser.trophies;
+
+  // Rang affiché : rang exact (Firestore count) en priorité, sinon position dans la liste affichée
+  const displayedRank = exactRank ?? (() => {
+    const idx = displayPlayers.findIndex((p) => p.id === currentUser.id);
+    return idx >= 0 ? idx + 1 : null;
+  })();
 
   const pulse = useSharedValue(1);
   useEffect(() => {
@@ -584,8 +609,10 @@ function MyRankCard({
                 {currentUser.username}
               </Text>
               <View style={S.myRankSubRow}>
-                <Text style={[S.myRankSub, { color: C.orange }]}>
-                  {myRank ? `#${myRank.toLocaleString(i18nLang)}` : "—"}
+                <Text style={[S.myRankSub, { color: displayedRank ? C.orange : C.textMuted }]}>
+                  {displayedRank
+                    ? `#${displayedRank.toLocaleString(i18nLang)}`
+                    : "—"}
                 </Text>
                 <Text style={[S.myRankDot, { color: C.textMuted }]}> · </Text>
                 <Text style={[S.myRankSub, { color: C.textMuted }]}>

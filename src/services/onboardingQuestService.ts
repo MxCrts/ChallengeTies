@@ -7,6 +7,7 @@ import {
   doc,
   runTransaction,
   increment,
+  getDoc, 
   serverTimestamp,
 } from "firebase/firestore";
 
@@ -230,6 +231,47 @@ export async function completeQuest(questId: QuestId): Promise<OnboardingState> 
   }
 
   return loadOnboardingState();
+}
+
+// ─── Sync depuis Firestore au login ──────────────────────────────────────────
+export async function syncOnboardingFromFirestore(): Promise<void> {
+  try {
+    const uid = auth.currentUser?.uid;
+    if (!uid) return;
+
+    const userRef = doc(db, "users", uid);
+    const snap = await getDoc(userRef);
+    if (!snap.exists()) return;
+
+    const data = snap.data() as any;
+    const firestoreQuests = data?.onboardingQuests ?? {};
+
+    // Reconstruit le KEY_STATE depuis les quêtes validées en Firestore
+    const rawState = await AsyncStorage.getItem(KEY_STATE);
+    const localCompleted: Partial<Record<QuestId, number>> = rawState
+      ? JSON.parse(rawState)
+      : {};
+
+    let changed = false;
+    for (const def of QUEST_DEFINITIONS) {
+      const doneInFirestore = firestoreQuests[def.id] === true;
+      if (doneInFirestore && !localCompleted[def.id]) {
+        // Récupère le timestamp Firestore si dispo, sinon Date.now()
+        const at = data?.onboardingQuests?.[`${def.id}At`];
+        localCompleted[def.id] = at?.toMillis?.() ?? Date.now();
+        changed = true;
+      }
+    }
+
+    if (changed) {
+      await AsyncStorage.multiSet([
+        [KEY_STATE, JSON.stringify(localCompleted)],
+        [KEY_INITIALIZED, "1"],
+      ]);
+    }
+  } catch (e) {
+    console.warn("[OnboardingQuest] syncFromFirestore error:", e);
+  }
 }
 
 // ─── Explore counter ─────────────────────────────────────────────────────────

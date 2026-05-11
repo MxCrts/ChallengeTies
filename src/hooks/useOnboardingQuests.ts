@@ -8,6 +8,7 @@ import {
   dismissOnboarding,
   incrementExploreCount,
   isProfileComplete,
+  syncOnboardingFromFirestore,
   type OnboardingState,
   type QuestId,
 } from "../services/onboardingQuestService";
@@ -25,7 +26,7 @@ export function useOnboardingQuests() {
   const mountedRef = useRef(true);
   const completingRef = useRef<Set<QuestId>>(new Set());
 
-  // ─── Load ────────────────────────────────────────────────────────────────
+// ─── Load ────────────────────────────────────────────────────────────────
 
   const load = useCallback(async () => {
     try {
@@ -37,6 +38,26 @@ export function useOnboardingQuests() {
       if (mountedRef.current) setLoading(false);
     }
   }, []);
+
+  useEffect(() => {
+  mountedRef.current = true;
+
+  // ✅ Sync depuis Firestore au montage (gère déco/reco et changement de device)
+  const init = async () => {
+    await syncOnboardingFromFirestore();
+    await load();
+  };
+  init();
+
+  const sub = AppState.addEventListener("change", (status: AppStateStatus) => {
+    if (status === "active") load(); // pas besoin de re-sync, juste reload local
+  });
+
+  return () => {
+    mountedRef.current = false;
+    sub.remove();
+  };
+}, [load]);
 
   // ─── Complete (avec guard anti-double) ───────────────────────────────────
 

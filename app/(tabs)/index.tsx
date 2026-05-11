@@ -395,6 +395,34 @@ const WELCOME_REWARDS_UI: { type: WelcomeRewardKind; amount: number }[] = [
   { type: "premium", amount: 7 },
 ];
 
+// Helper : slug de catégorie Firestore → label i18n
+const CATEGORY_RAW_TO_SLUG: Record<string, string> = {
+  "Fitness": "Fitness",
+  "Santé": "Santé",
+  "Finance": "Finance",
+  "Mode de Vie": "Mode de Vie",
+  "Mode de vie": "Mode de Vie",
+  "Éducation": "Éducation",
+  "Education": "Éducation",
+  "Créativité": "Créativité",
+  "Creativite": "Créativité",
+  "Créativite": "Créativité",
+  "Carrière": "Carrière",
+  "Carriere": "Carrière",
+  "Social": "Social",
+  "Productivité": "Productivité",
+  "Productivite": "Productivité",
+  "Écologie": "Écologie",
+  "Ecologie": "Écologie",
+  "Motivation": "Motivation",
+  "Discipline": "Discipline",
+  "Développement Personnel": "Développement Personnel",
+  "Developpement Personnel": "Développement Personnel",
+  "Développement personnel": "Développement Personnel",
+  "État d'esprit": "État d'esprit",
+  "Etat d'esprit": "État d'esprit",
+};
+
 const WELCOME_TOTAL_DAYS = WELCOME_REWARDS_UI.length;
 
 export default function HomeScreen() {
@@ -2070,26 +2098,36 @@ useEffect(() => {
     );
   }
 
-        return {
-          id: snap.id,
-         title: data?.title
-  ? data.title
-  : data?.chatId
-  ? t(`challenges.${data.chatId}.title`)
-  : t("mysteriousChallenge"),
-          description: data?.description
-  ? data.description
-  : data?.chatId
-  ? t(`challenges.${data.chatId}.description`)
-  : t("noDescriptionAvailable"),
-          category: data?.category
-            ? t(`categories.${data.category}`)
-            : t("miscellaneous"),
-          imageUrl,
-          imageThumbUrl,
-          day: data?.day,
-          approved: data?.approved,
-        };
+        // Titre : chatId prioritaire pour la traduction, title Firestore en fallback
+const chatId: string | undefined = data?.chatId;
+const rawTitle: string = data?.title ?? "";
+const rawDesc: string = data?.description ?? "";
+const rawCategory: string = data?.category ?? "";
+
+const translatedTitle = chatId
+  ? t(`challenges.${chatId}.title`, { defaultValue: rawTitle || t("mysteriousChallenge") })
+  : rawTitle || t("mysteriousChallenge");
+
+const translatedDesc = chatId
+  ? t(`challenges.${chatId}.description`, { defaultValue: rawDesc || t("noDescriptionAvailable") })
+  : rawDesc || t("noDescriptionAvailable");
+
+// Catégorie : normalise la valeur Firestore vers la clé i18n correcte
+const normalizedCategory = CATEGORY_RAW_TO_SLUG[rawCategory] ?? rawCategory;
+const translatedCategory = normalizedCategory
+  ? t(`categories.${normalizedCategory}`, { defaultValue: normalizedCategory })
+  : t("miscellaneous");
+
+return {
+  id: snap.id,
+  title: translatedTitle,
+  description: translatedDesc,
+  category: translatedCategory,
+  imageUrl,
+  imageThumbUrl,
+  day: data?.day,
+  approved: data?.approved,
+};
       });
 
       const key = todayKeyLocal();

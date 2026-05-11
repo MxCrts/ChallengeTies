@@ -3509,33 +3509,51 @@ const scrollContentStyle = useMemo(
           </Text>
         </View>
       ) : (
-        <LinearGradient
-          colors={
-            marking
-              ? ["#6b7280", "#6b7280"] // gris pendant l’envoi
-              : [currentTheme.colors.primary, currentTheme.colors.secondary]
-          }
-          style={styles.markTodayButtonGradient}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-        >
-          <View style={{ flex: 1, alignItems: "center" }}>
-           <Text style={[styles.markTodayButtonText, { color: currentTheme.colors.textPrimary }]}>
-             {marking ? t("commonS.sending", { defaultValue: "Envoi..." }) : t("homeZ.todayHub.primaryActiveShort", { defaultValue: "Check in" })}
-           </Text>
-           {!marking && (
-             <Text style={{
-               fontFamily: "Comfortaa_400Regular",
-               fontSize: normalizeSize(11),
-               color: "rgba(11,17,32,0.78)",
-               marginTop: normalizeSize(3),
-               includeFontPadding: false,
-             }}>
-               {t("homeZ.todayHub.markHint", { defaultValue: "Même partiel, ça compte. 1 tap suffit." })}
-             </Text>
-           )}
-         </View>
-        </LinearGradient>
+        // REMPLACE le LinearGradient du bouton mark (état non-marqué) :
+<LinearGradient
+  colors={
+    marking
+      ? ["#6b7280", "#6b7280"]
+      : [currentTheme.colors.primary, currentTheme.colors.secondary]
+  }
+  style={[styles.markTodayButtonGradient, { paddingVertical: normalizeSize(12), height: undefined }]}
+  start={{ x: 0, y: 0 }}
+  end={{ x: 1, y: 1 }}
+>
+  <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: normalizeSize(8) }}>
+    {!marking && (
+      <View style={{
+        width: normalizeSize(22),
+        height: normalizeSize(22),
+        borderRadius: normalizeSize(999),
+        backgroundColor: "rgba(11,17,32,0.20)",
+        alignItems: "center",
+        justifyContent: "center",
+        flexShrink: 0,
+      }}>
+        <Ionicons name="checkmark" size={normalizeSize(14)} color="#0B1120" />
+      </View>
+    )}
+    <View style={{ alignItems: "center" }}>
+      <Text style={[styles.markTodayButtonText, { color: "#0B1120", letterSpacing: -0.2 }]}>
+        {marking
+          ? t("commonS.sending", { defaultValue: "Envoi..." })
+          : t("homeZ.todayHub.primaryActiveShort", { defaultValue: "Marquer aujourd'hui" })}
+      </Text>
+      {!marking && (
+        <Text style={{
+          fontFamily: "Comfortaa_400Regular",
+          fontSize: normalizeSize(11),
+          color: "rgba(11,17,32,0.62)",
+          marginTop: normalizeSize(2),
+          includeFontPadding: false,
+        }}>
+          {t("homeZ.todayHub.markHint", { defaultValue: "Même partiel, ça compte. 1 tap suffit." })}
+        </Text>
+      )}
+    </View>
+  </View>
+</LinearGradient>
       )}
     </TouchableOpacity>
     </Animated.View>
@@ -3646,14 +3664,13 @@ const scrollContentStyle = useMemo(
           {challengeTakenOptimistic && (
             <View style={{ marginTop: SPACING * 1.5 }}>
               <ChallengeJournal
-                completionDateKeys={
-                  currentChallenge?.completionDateKeys ?? []
-                }
-                performanceLogs={localPerformanceLogs}
-                selectedDays={finalSelectedDays}
-                isDarkMode={isDarkMode}
-                t={t}
-              />
+  completionDateKeys={currentChallenge?.completionDateKeys ?? []}
+  performanceLogs={localPerformanceLogs}
+  selectedDays={finalSelectedDays}
+  startedKey={(currentChallenge as any)?.startedKey ?? null}
+  isDarkMode={isDarkMode}
+  t={t}
+/>
             </View>
           )}
             
