@@ -24,6 +24,7 @@
     "@react-native-community/netinfo": "11.4.1",
     "@react-native-firebase/analytics": "^23.8.6",
     "@react-native-firebase/app": "^23.8.6",
+    "@react-native-firebase/crashlytics": "^24.0.0",
     "@react-native-google-signin/google-signin": "^16.1.2",
     "@react-native-masked-view/masked-view": "0.3.2",
     "@react-native-picker/picker": "2.11.0",

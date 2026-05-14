@@ -320,6 +320,7 @@ export { checkExpiredInvitations } from "./checkExpiredInvitations";
 export { sendWeeklyReport } from "./sendWeeklyReport";
 export { translateContent } from "./translateContent";
 export { resetWeeklyLeaderboard } from "./resetWeeklyLeaderboard";
+export { deleteUserAccount } from "./deleteUserAccount";
 
 
 

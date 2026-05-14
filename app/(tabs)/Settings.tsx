@@ -54,6 +54,7 @@ import * as Device from "expo-device";
 import { useToast } from "@/src/ui/Toast";
 import { usePremium } from "@/src/context/PremiumContext";
 import { isFeedEnabled, enableFeed, disableFeed } from "@/src/services/globalFeedService";
+import { getFunctions, httpsCallable } from "firebase/functions";
 
 const SPACING = 18;
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
@@ -660,49 +661,51 @@ export default function Settings() {
   };
 
   const handleDeleteAccount = () => {
-    Alert.alert(
-      t("deleteAccount"),
-      t("deleteAccountConfirm"),
-      [
-        { text: t("cancel"), style: "cancel" },
-        {
-          text: t("delete"),
-          style: "destructive",
-          onPress: async () => {
-            try {
-              const user = auth.currentUser;
-              if (!user) {
-                showErrorAlert("error", "noUserConnected");
-                return;
-              }
-              await user.delete();
-              showToast(
-                t("accountDeleted", {
-                  defaultValue: "Compte supprimé.",
-                }),
-                "success"
-              );
-              router.replace("/login");
-            } catch (error: any) {
-              console.error("❌ deleteAccount:", error);
-              if (error?.code === "auth/requires-recent-login") {
-                Alert.alert(
-                  t("error"),
-                  t("deleteAccountReauth", {
-                    defaultValue:
-                      "Pour des raisons de sécurité, reconnecte-toi avant de supprimer ton compte.",
-                  })
-                );
-              } else {
-                showErrorAlert("error", "failedToDeleteAccount");
-              }
-            }
-          },
-        },
-      ],
-      { cancelable: true }
+  Alert.alert(
+    t("deleteAccount"),
+    t("deleteAccountConfirm"),
+    [
+      { text: t("cancel"), style: "cancel" },
+      {
+        text: t("delete"),
+        style: "destructive",
+       onPress: async () => {
+  try {
+    const user = auth.currentUser;
+    if (!user) {
+      showErrorAlert("error", "noUserConnected");
+      return;
+    }
+
+    const functions = getFunctions(undefined, "europe-west1");
+    const deleteAccount = httpsCallable(functions, "deleteUserAccount");
+    await deleteAccount();
+
+    await AsyncStorage.clear();
+    showToast(
+      t("accountDeleted", { defaultValue: "Compte supprimé." }),
+      "success"
     );
-  };
+    router.replace("/login");
+  } catch (error: any) {
+    console.error("❌ deleteAccount:", error);
+    if (error?.code === "auth/requires-recent-login") {
+      Alert.alert(
+        t("error"),
+        t("deleteAccountReauth", {
+          defaultValue: "Pour des raisons de sécurité, reconnecte-toi avant de supprimer ton compte.",
+        })
+      );
+    } else {
+      showErrorAlert("error", "failedToDeleteAccount");
+    }
+  }
+},
+      },
+    ],
+    { cancelable: true }
+  );
+};
 
   const adminUID = "GiN2yTfA7NWISeb4QjXmDPq5TgK2";
 

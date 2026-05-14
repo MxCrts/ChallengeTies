@@ -177,6 +177,7 @@
         }
       ],
       "expo-mail-composer",
+      "@react-native-firebase/crashlytics",
       "expo-iap",
       "expo-tracking-transparency",
       "expo-apple-authentication",

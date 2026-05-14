@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.resetWeeklyLeaderboard = exports.translateContent = exports.sendWeeklyReport = exports.checkExpiredInvitations = exports.acceptMatchingInvitation = exports.sendMatchingPush = exports.sendDuoNudge = exports.onUserActivated = exports.claimReferralMilestone = exports.invitationsOnWrite = exports.dl = void 0;
+exports.deleteUserAccount = exports.resetWeeklyLeaderboard = exports.translateContent = exports.sendWeeklyReport = exports.checkExpiredInvitations = exports.acceptMatchingInvitation = exports.sendMatchingPush = exports.sendDuoNudge = exports.onUserActivated = exports.claimReferralMilestone = exports.invitationsOnWrite = exports.dl = void 0;
 const express_1 = __importDefault(require("express"));
 const https_1 = require("firebase-functions/v2/https");
 const app_1 = require("firebase-admin/app");
@@ -292,3 +292,5 @@ var translateContent_1 = require("./translateContent");
 Object.defineProperty(exports, "translateContent", { enumerable: true, get: function () { return translateContent_1.translateContent; } });
 var resetWeeklyLeaderboard_1 = require("./resetWeeklyLeaderboard");
 Object.defineProperty(exports, "resetWeeklyLeaderboard", { enumerable: true, get: function () { return resetWeeklyLeaderboard_1.resetWeeklyLeaderboard; } });
+var deleteUserAccount_1 = require("./deleteUserAccount");
+Object.defineProperty(exports, "deleteUserAccount", { enumerable: true, get: function () { return deleteUserAccount_1.deleteUserAccount; } });
