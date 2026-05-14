@@ -120,14 +120,22 @@
             "minSdkVersion": 24
           },
           "ios": {
-            "useModularHeaders": true,
-            "extraPods": [
-              {
-                "name": "GoogleUtilities",
-                "modular_headers": true
-              }
-            ]
-          }
+  "useModularHeaders": true,
+  "extraPods": [
+    {
+      "name": "GoogleUtilities",
+      "modular_headers": true
+    },
+    {
+      "name": "GoogleDataTransport",
+      "modular_headers": true
+    },
+    {
+      "name": "nanopb",
+      "modular_headers": true
+    }
+  ]
+}
         }
       ],
       [
