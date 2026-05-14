@@ -55,6 +55,7 @@ import { useToast } from "@/src/ui/Toast";
 import { usePremium } from "@/src/context/PremiumContext";
 import { isFeedEnabled, enableFeed, disableFeed } from "@/src/services/globalFeedService";
 import { getFunctions, httpsCallable } from "firebase/functions";
+import { app } from "@/constants/firebase-config";
 
 const SPACING = 18;
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
@@ -677,7 +678,7 @@ export default function Settings() {
       return;
     }
 
-    const functions = getFunctions(undefined, "europe-west1");
+    const functions = getFunctions(app, "europe-west1");
     const deleteAccount = httpsCallable(functions, "deleteUserAccount");
     await deleteAccount();
 
