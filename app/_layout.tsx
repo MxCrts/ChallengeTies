@@ -88,7 +88,6 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useForceUpdate } from "@/hooks/useForceUpdate";
 import ForceUpdateModal from "@/components/ForceUpdateModal";
-import crashlytics from '@react-native-firebase/crashlytics';
 
 const FORCE_ADS_DEBUG = false;
 
@@ -1362,8 +1361,6 @@ export default function RootLayout() {
     (globalThis as any).__ATT_DONE__ = false;
     (globalThis as any).__ATT_STATUS__ = "unknown";
     const t = setTimeout(() => { (globalThis as any).__ATT_DONE__ = true; }, 15000);
-
-    crashlytics().setCrashlyticsCollectionEnabled(true);
 
     return () => clearTimeout(t);
   }, []);
