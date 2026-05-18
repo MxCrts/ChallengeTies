@@ -72,7 +72,7 @@ export const QUEST_DEFINITIONS: QuestDef[] = [
     icon: "people-outline",
     trophies: 40,
     actionRoute: null,
-    order: 1,
+    order: 4,
   },
   {
     id: "claim_daily_bonus",
@@ -90,7 +90,7 @@ export const QUEST_DEFINITIONS: QuestDef[] = [
     icon: "compass-outline",
     trophies: 15,
     actionRoute: "/explore",
-    order: 3,
+    order: 1,
   },
   {
     id: "complete_profile",
@@ -99,7 +99,7 @@ export const QUEST_DEFINITIONS: QuestDef[] = [
     icon: "person-circle-outline",
     trophies: 20,
     actionRoute: "/profile/UserInfo",
-    order: 4,
+    order: 3,
   },
   {
     id: "maintain_3day_streak",

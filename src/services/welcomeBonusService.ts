@@ -71,7 +71,9 @@ export function computeWelcomeBonusState(
     return { currentDay, completed: true, canClaimToday: false, lastClaimDate };
   }
 
-  const canClaimToday = lastClaimDate !== today;
+  // ✅ J1 : jamais réclamé → on attend le J2 (lastClaimDate null = premier login)
+  const isFirstEverLogin = lastClaimDate === null && currentDay === 0;
+  const canClaimToday = !isFirstEverLogin && lastClaimDate !== today;
   return { currentDay, completed: false, canClaimToday, lastClaimDate };
 }
 

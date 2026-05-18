@@ -170,6 +170,7 @@ export default function ProfileScreen() {
   const [weeklyReportVisible, setWeeklyReportVisible] = useState(false);
   const [weeklyReportLoading, setWeeklyReportLoading] = useState(false);
   const [hasWeeklyReport, setHasWeeklyReport] = useState(false);
+  const [sectionExpanded, setSectionExpanded] = useState(false);
 
   const PROFILE_FIRST_SEEN_KEY = "profile.firstSeen.v1";
   const firstProfileGateRef = React.useRef(false);
@@ -193,6 +194,38 @@ export default function ProfileScreen() {
 
   const currentTheme: Theme = isDarkMode ? designSystem.darkTheme : designSystem.lightTheme;
 
+   const momentum = useMemo(() => {
+    const list = (userData as any)?.CurrentChallenges;
+    if (!Array.isArray(list) || list.length === 0) return null;
+
+    // Trouver le streak le plus élevé parmi les challenges actifs
+    let best = 0;
+    let isToday = false;
+    const todayKey = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+    // dayKey UTC "YYYYMMDD"
+    const todayUTC = (() => {
+      const d = new Date();
+      const y = d.getUTCFullYear();
+      const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+      const day = String(d.getUTCDate()).padStart(2, "0");
+      return `${y}${m}${day}`;
+    })();
+
+    for (const ch of list) {
+      const streak = Number(ch?.streak || 0);
+      if (streak <= 0) continue;
+      if (streak > best) {
+        best = streak;
+        // Check si marqué aujourd'hui
+        const lastKey = String(ch?.lastMarkedKey || "").replace(/[^\d]/g, "");
+        isToday = lastKey === todayUTC;
+      }
+    }
+
+    if (best === 0) return null;
+    return { streak: best, isToday };
+  }, [userData]);
+
   const totalInventoryItems = useMemo(() => {
     const inv = userData?.inventory;
     if (!inv || typeof inv !== "object") return 0;
@@ -201,6 +234,8 @@ export default function ProfileScreen() {
       return sum;
     }, 0);
   }, [userData]);
+
+  
 
   // ── Firestore user ────────────────────────────────────────────────────────
   useEffect(() => {
@@ -316,11 +351,16 @@ export default function ProfileScreen() {
     { name: t("myChallenges"), icon: "create-outline", navigateTo: "profile/MyChallenges", testID: "my-challenges-button", accessibilityLabel: t("access.myChallenges.label"), accessibilityHint: t("access.myChallenges.hint") },
   ], [t, i18n.language, userData, totalInventoryItems]);
 
-  const rows = useMemo<ProfileSection[][]>(() => {
-    const split: ProfileSection[][] = [];
-    for (let i = 0; i < sections.length; i += 2) split.push(sections.slice(i, i + 2));
-    return split;
-  }, [sections, i18n.language]);
+  const visibleSections = useMemo(
+  () => sectionExpanded ? sections : sections.slice(0, 4),
+  [sections, sectionExpanded]
+);
+
+const rows = useMemo<ProfileSection[][]>(() => {
+  const split: ProfileSection[][] = [];
+  for (let i = 0; i < visibleSections.length; i += 2) split.push(visibleSections.slice(i, i + 2));
+  return split;
+}, [visibleSections, i18n.language]);
 
   // ── États de chargement ────────────────────────────────────────────────────
   if (isLoading) {
@@ -406,6 +446,44 @@ export default function ProfileScreen() {
               <Text style={[s.username, { color: textPrimary }]} numberOfLines={1} adjustsFontSizeToFit>
                 {userData?.username || t("yourProfile")}
               </Text>
+
+              {/* ── Momentum indicator ── */}
+              {momentum && (
+                <View style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: n(5),
+                  marginTop: n(6),
+                  marginBottom: n(2),
+                }}>
+                  <Text style={{
+                    fontSize: n(13),
+                    includeFontPadding: false,
+                  }}>
+                    {momentum.isToday ? "🔥" : "⚡"}
+                  </Text>
+                  <Text style={{
+                    fontFamily: "Comfortaa_700Bold",
+                    fontSize: n(12),
+                    color: momentum.isToday ? primaryColor : (isDarkMode ? "rgba(255,255,255,0.55)" : "rgba(0,0,0,0.45)"),
+                    includeFontPadding: false,
+                  }}>
+                    {momentum.isToday ? "+" : ""}{momentum.streak} {t("profileS.momentumDays", { count: momentum.streak, defaultValue: momentum.streak > 1 ? "jours" : "jour" })
+}
+                  </Text>
+                  <Text style={{
+                    fontFamily: "Comfortaa_400Regular",
+                    fontSize: n(11),
+                    color: isDarkMode ? "rgba(255,255,255,0.35)" : "rgba(0,0,0,0.35)",
+                    includeFontPadding: false,
+                  }}>
+                    {momentum.isToday
+                      ? t("profileS.momentumActive", { defaultValue: "de série active" })
+                      : t("profileS.momentumPaused", { defaultValue: "de série" })}
+                  </Text>
+                </View>
+              )}
 
               {userData?.challengeCategories && userData.challengeCategories.filter(Boolean).length > 0 ? (
   <View style={s.interestsRow}>
@@ -698,7 +776,42 @@ export default function ProfileScreen() {
             ))}
           </View>
 
-          <View style={{ height: n(8) }} />
+          <Pressable
+  onPress={() => setSectionExpanded(v => !v)}
+  style={({ pressed }) => ({
+    alignSelf: "center",
+    marginTop: n(4),
+    marginBottom: n(8),
+    flexDirection: "row",
+    alignItems: "center",
+    gap: n(6),
+    paddingVertical: n(10),
+    paddingHorizontal: n(20),
+    borderRadius: n(999),
+    borderWidth: 1,
+    borderColor: isDarkMode ? "rgba(249,115,22,0.25)" : "rgba(249,115,22,0.18)",
+    backgroundColor: isDarkMode
+      ? "rgba(249,115,22,0.08)"
+      : "rgba(249,115,22,0.05)",
+    opacity: pressed ? 0.76 : 1,
+  })}
+>
+  <Text style={{
+    fontFamily: "Comfortaa_700Bold",
+    fontSize: n(12.5),
+    color: "#F97316",
+    includeFontPadding: false,
+  }}>
+    {sectionExpanded
+      ? t("profileS.seeLess", { defaultValue: "Voir moins" })
+      : t("profileS.seeMore", { defaultValue: "Voir tout mon espace" })}
+  </Text>
+  <Ionicons
+    name={sectionExpanded ? "chevron-up" : "chevron-down"}
+    size={n(14)}
+    color="#F97316"
+  />
+</Pressable>
         </ScrollView>
 
         {/* Bannière pub */}

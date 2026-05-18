@@ -578,6 +578,10 @@
       "ready": "कन्फर्म होते ही: डुओ शुरू"
     }
   },
+  "duo": {
+  "partnerMarked": "{{name}} ने आज मार्क कर दिया। अब तुम्हारी बारी है।",
+  "partnerNotMarked": "{{name}} ने आज अभी तक मार्क नहीं किया।"
+},
     "hero": {
       "brand": "ChallengeTies",
       "greeting": "हे {{name}} 👋",
@@ -812,7 +816,13 @@
     "sectionsListA11y": "प्रोफ़ाइल सामग्री और सेक्शन सूची",
     "noData": "प्रोफ़ाइल डेटा उपलब्ध नहीं है।",
     "locationLabel": "स्थान",
-    "interestsLabel": "रुचियाँ"
+    "interestsLabel": "रुचियाँ",
+    "seeMore": "सब देखें",
+    "seeLess": "कम देखें",
+    "momentumDays": "दिन",
+"momentumDays_plural": "दिन",
+"momentumActive": "सक्रिय स्ट्रीक",
+"momentumPaused": "स्ट्रीक"
   },
   "savedShort": "सहेजा गया"
 ,
@@ -1483,6 +1493,10 @@
   "completedOnDate": "पूर्ण हुई",
   "completion": {
      "rewardLabel": "इनाम",
+     "coaching": {
+  "title": "तुमने पूरा किया 🏆",
+  "sub": "{{name}} {{done}}/{{total}} पर है। उसे प्रोत्साहित करो।"
+},
      "identity": {
       "first":  "पहला चैलेंज पूरा। तुमने साबित किया कि तुम सच में शुरू करते हो।",
       "second": "दो चैलेंज पूरे। ज़्यादातर लोग पहले पर ही रुक जाते हैं।",
@@ -4896,6 +4910,9 @@
   "shareCardT": {
     "dayOf": "दिन {{day}} / {{total}}",
   "tagline": "ChallengeTies पर चैलेंज में शामिल हों",
+  "challengeBtn": "👊 चुनौती दो",
+"challengeTitle": "मैं तुम्हें चुनौती देता हूँ!",
+"challengeMsg": "{{name}} ने \"{{title}}\" पर तुम्हें चुनौती दी है। क्या तुम तैयार हो? 👊",
   "a11yTitle": "चैलेंज शेयर कार्ड",
   "a11yHint": "दोस्तों के साथ साझा करने से पहले कार्ड देखें।",
   "heldSolo": "मैंने टिके रहे",
@@ -4936,7 +4953,15 @@
 },
 "exploits": {
   "title": "पराक्रम",
+  "emptyFirstToday": "आज पहले अपना कारनामा दर्ज करो 🔥\nइतिहास में नाम दर्ज करने के लिए एक चैलेंज मार्क करो।",
+"emptyCtaGoMark": "मेरा चैलेंज मार्क करें",
   "subtitle": "समुदाय के महान कार्य",
+  "system": {
+  "username": "ChallengeTies",
+  "popular100": "🔥 {{count}} लोग «{{title}}» चुनौती ले रहे हैं",
+  "popular20": "⚡ {{count}} लोग «{{title}}» चुनौती ले रहे हैं",
+  "popular2": "👥 {{count}} लोग «{{title}}» चुनौती ले रहे हैं"
+},
   "loading": "इतिहास-ग्रंथ खोल रहे हैं…",
   "loadError": "पराक्रम लोड नहीं हो सके।",
   "retry": "पुनः प्रयास",
@@ -4988,6 +5013,8 @@
     "streakTitle": "स्ट्रीक बचाओ",
     "postCompletionTitle": "🔥 अगले के लिए तैयार?",
     "dailyPersonal1": "✅ \"{{title}}\" आज तुम्हारा इंतज़ार कर रहा है।",
+    "partnerCompletedTitle": "🏆 तुम्हारे पार्टनर ने पूरा किया!",
+"partnerCompletedBody": "{{name}} ने {{days}} दिन पूरे किए। जारी रखो, तुम कर सकते हो!",
 "dailyPersonal2": "🔥 \"{{title}}\" पर एक और दिन। चलो।",
 "dailyPersonal3": "⚡ \"{{title}}\" — 1 टैप से चेक इन करो।",
 "dailyPersonalMulti1": "✅ \"{{title}}\" और {{count}} और चुनौतियाँ बाकी हैं।",

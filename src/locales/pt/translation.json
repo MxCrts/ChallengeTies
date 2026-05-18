@@ -1186,6 +1186,10 @@
   "networkError": "Problema de rede. Tenta novamente.",
   "completion": {
     "rewardLabel": "Recompensa",
+    "coaching": {
+  "title": "Você terminou 🏆",
+  "sub": "{{name}} está em {{done}}/{{total}}. Incentive-o!"
+},
     "identity": {
       "first":  "Primeiro desafio concluído. Acabaste de provar que realmente começas.",
       "second": "Dois desafios concluídos. A maioria para no primeiro.",
@@ -1315,7 +1319,13 @@
     "interestsLabel": "Centros de interesse",
     "heroSub": "Tudo o que te torna mais forte, num só lugar.",
     "sectionsListA11y": "Conteúdo do perfil e lista de seções",
-    "noData": "Nenhum dado de perfil disponível."
+    "noData": "Nenhum dado de perfil disponível.",
+    "seeMore": "Ver tudo",
+    "seeLess": "Ver menos",
+    "momentumDays": "dia",
+"momentumDays_plural": "dias",
+"momentumActive": "sequência ativa",
+"momentumPaused": "sequência"
   },
   "inviteFriends": "Convidar amigos",
   "referral": {
@@ -2444,6 +2454,9 @@
   "shareCardT": {
     "dayOf": "Dia {{day}} de {{total}}",
   "tagline": "Junte-se ao desafio no ChallengeTies",
+  "challengeBtn": "👊 Desafiar",
+"challengeTitle": "Eu te desafio!",
+"challengeMsg": "{{name}} está te desafiando em \"{{title}}\". Vai encarar? 👊",
   "a11yTitle": "Cartão de compartilhamento do desafio",
   "a11yHint": "Visualize o cartão antes de compartilhá-lo com amigos.",
   "heldSolo": "Eu aguentei",
@@ -2483,7 +2496,15 @@
 },
 "exploits": {
   "title": "FAÇANHAS",
+  "emptyFirstToday": "Sê o primeiro a gravar uma façanha hoje 🔥\nMarca um desafio para entrar nos anais.",
+"emptyCtaGoMark": "Marcar o meu desafio",
   "subtitle": "Os grandes feitos da comunidade",
+  "system": {
+  "username": "ChallengeTies",
+  "popular100": "🔥 {{count}} pessoas estão no desafio «{{title}}»",
+  "popular20": "⚡ {{count}} pessoas estão no desafio «{{title}}»",
+  "popular2": "👥 {{count}} pessoas estão no desafio «{{title}}»"
+},
   "loading": "Consultando os anais…",
   "loadError": "Não foi possível carregar as façanhas.",
   "retry": "Tentar novamente",
@@ -2533,6 +2554,8 @@
 },
   "notificationsPush": {
      "daily1": "Um desafio hoje pode mudar o seu dia. Bora?",
+     "partnerCompletedTitle": "🏆 Seu parceiro terminou!",
+"partnerCompletedBody": "{{name}} completou {{days}} dias. Continue, você consegue!",
      "dailyPersonal1": "✅ \"{{title}}\" está te esperando hoje.",
 "dailyPersonal2": "🔥 Mais um dia em \"{{title}}\". Vamos.",
 "dailyPersonal3": "⚡ \"{{title}}\" — 1 clique para validar.",
@@ -2665,6 +2688,10 @@
       "ready": "Assim que confirmar: o Duo começa"
     }
   },
+  "duo": {
+  "partnerMarked": "{{name}} marcou hoje. Agora é a sua vez.",
+  "partnerNotMarked": "{{name}} ainda não marcou hoje."
+},
     "hero": {
       "brand": "ChallengeTies",
       "greeting": "Olá {{name}} 👋",

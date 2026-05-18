@@ -26,6 +26,8 @@ import type { AnimatedStyle } from "react-native-reanimated";
 import type { ViewStyle } from "react-native";
 import type { ForgeState, ForgeStep } from "../../services/ForgeService";
 import { computeForgeExpired } from "../../services/ForgeService";
+import { DeviceEventEmitter } from "react-native";
+import { MARK_TOAST_EVENT } from "../../context/CurrentChallengesContext";
 
 export type TodayHubPrimaryMode = "mark" | "new" | "pick" | "duo" | "duoPending";
 
@@ -165,6 +167,7 @@ export default function TodayHub(props: Props) {
   const breath = useSharedValue(0);
   const aura = useSharedValue(0);
   const ctaShine = useSharedValue(-1);
+  const ctaBurst = useSharedValue(1);
 
   useEffect(() => {
     if (!isPending) {
@@ -182,6 +185,19 @@ export default function TodayHub(props: Props) {
     ctaShine.value = withRepeat(withTiming(1, { duration: 2400, easing: Easing.inOut(Easing.ease) }), -1, false);
   }, [isMark]);
 
+  useEffect(() => {
+    if (!isMark) return;
+    const sub = DeviceEventEmitter.addListener(MARK_TOAST_EVENT, (payload: any) => {
+      if (payload?.kind !== "success") return;
+      ctaBurst.value = withSpring(0.93, { damping: 10, stiffness: 400 }, () => {
+        ctaBurst.value = withSpring(1.06, { damping: 12, stiffness: 300 }, () => {
+          ctaBurst.value = withSpring(1, { damping: 14, stiffness: 200 });
+        });
+      });
+    });
+    return () => sub.remove();
+  }, [isMark]);
+
   const ringStyle = useAnimatedStyle(() => ({
     transform: [{ scale: 1 + ring.value * 0.045 }],
     opacity: 0.12 + ring.value * 0.10,
@@ -197,6 +213,10 @@ export default function TodayHub(props: Props) {
   const ctaShineStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: ctaShine.value * (CONTENT_MAX_W + 60) }],
     opacity: 0.18,
+  }));
+
+  const ctaBurstStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: ctaBurst.value }],
   }));
 
   // ─── Derived ───────────────────────────────────────────────────────────
@@ -793,6 +813,7 @@ export default function TodayHub(props: Props) {
         ) : (
           // Mode normal — CTA énorme
           <View style={{ paddingHorizontal: UI.pad, paddingBottom: UI.pad }}>
+             <Animated.View style={ctaBurstStyle}>
             <Pressable
               ref={primaryCtaRef as any}
               onPress={() => { hapticTap("light"); onPrimaryPress(); }}
@@ -889,6 +910,7 @@ export default function TodayHub(props: Props) {
                 </View>
               </LinearGradient>
             </Pressable>
+            </Animated.View>
 
             {/* Solo link discret */}
             {showSoloLink && (

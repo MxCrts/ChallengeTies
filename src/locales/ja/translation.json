@@ -1187,6 +1187,10 @@
   "networkError": "ネットワークエラー。再試行してください。",
   "completion": {
     "rewardLabel": "報酬",
+    "coaching": {
+  "title": "完了した 🏆",
+  "sub": "{{name}} は {{done}}/{{total}} まで来ている。励ましてあげよう！"
+},
     "identity": {
       "first":  "最初のチャレンジ完了。本当に始めることを証明した。",
       "second": "2つのチャレンジ完了。ほとんどの人は最初で諦める。",
@@ -1316,7 +1320,13 @@
     "heroSub": "強くなるためのすべてを、ひとつに。",
     "sectionsListA11y": "プロフィール内容とセクション一覧",
     "noData": "プロフィールデータがありません。",
-    "interestsLabel": "興味・関心"
+    "interestsLabel": "興味・関心",
+    "seeMore": "すべて表示",
+    "seeLess": "閉じる",
+    "momentumDays": "日",
+"momentumDays_plural": "日",
+"momentumActive": "継続中",
+"momentumPaused": "連続"
   },
   "inviteFriends": "友だちを招待",
   
@@ -2527,6 +2537,9 @@
      "dayOf": "{{total}}日中{{day}}日目",
   "tagline": "ChallengeTiesでチャレンジに参加しよう",
   "a11yTitle": "チャレンジ共有カード",
+  "challengeBtn": "👊 挑戦する",
+"challengeTitle": "挑戦するぞ！",
+"challengeMsg": "{{name}} が「{{title}}」で挑戦状を叩きつけた。受けて立つ？👊",
   "a11yHint": "共有する前にカードをプレビューできます。",
   "heldSolo": "やり切った",
     "heldDuo": "やり切った",
@@ -2565,7 +2578,15 @@
 },
 "exploits": {
   "title": "偉業",
+  "emptyFirstToday": "今日最初の偉業を刻む人になろう 🔥\nチャレンジをマークして歴史に名を残そう。",
+"emptyCtaGoMark": "チャレンジをマークする",
   "subtitle": "コミュニティの偉大な功績",
+  "system": {
+  "username": "ChallengeTies",
+  "popular100": "🔥 {{count}} 人が「{{title}}」に挑戦中",
+  "popular20": "⚡ {{count}} 人が「{{title}}」に挑戦中",
+  "popular2": "👥 {{count}} 人が「{{title}}」に挑戦中"
+},
   "loading": "年代記を調べています…",
   "loadError": "偉業を読み込めませんでした。",
   "retry": "再試行",
@@ -2615,6 +2636,8 @@
 },
   "notificationsPush": {
     "daily1": "今日の1チャレンジが、1日を変える。やる？",
+    "partnerCompletedTitle": "🏆 パートナーが完了した！",
+"partnerCompletedBody": "{{name}} が {{days}} 日を達成した。続けよう、君ならできる！",
     "dailyPersonal1": "✅「{{title}}」が今日あなたを待っています。",
 "dailyPersonal2": "🔥「{{title}}」でまた1日。さあ行こう。",
 "dailyPersonal3": "⚡「{{title}}」— タップ1つでチェックイン。",
@@ -2756,6 +2779,10 @@
       "ready": "承認されたら：デュオ開始"
     }
   },
+  "duo": {
+  "partnerMarked": "{{name}} が今日チェックインした。あなたの番だ。",
+  "partnerNotMarked": "{{name}} はまだ今日チェックインしていない。"
+},
     "hero": {
       "brand": "ChallengeTies",
       "greeting": "やあ {{name}} 👋",

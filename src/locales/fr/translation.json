@@ -170,7 +170,10 @@
       "seeAllA11y": "Voir tous les défis",
       "seeAllHint": "Ouvre Explore pour découvrir tous les défis."
     },
-
+"duo": {
+  "partnerMarked": "{{name}} a marqué aujourd'hui. À toi.",
+  "partnerNotMarked": "{{name}} n'a pas encore marqué aujourd'hui."
+},
     "discover": {
       "title": "Découvrir",
       "subtitle2": "L’essentiel. Le reste en bas.",
@@ -1510,6 +1513,10 @@
   "networkError": "Problème réseau. Réessaie.",
   "completion": {
     "rewardLabel": "Récompense",
+    "coaching": {
+    "title": "Tu as terminé 🏆",
+    "sub": "{{name}} en est à {{done}}/{{total}}. Encourage-le."
+  },
     "identity": {
    "first":  "Premier challenge terminé. Tu as prouvé que tu commences vraiment.",
    "second": "Deux challenges terminés. La plupart s'arrêtent au premier.",
@@ -1643,7 +1650,13 @@
     "interestsLabel": "Centres d’intérêt",
     "heroSub": "Tout ce qui te rend plus fort, au même endroit.",
     "sectionsListA11y": "Contenu du profil et liste des sections",
-    "noData": "Aucune donnée de profil disponible."
+    "noData": "Aucune donnée de profil disponible.",
+    "seeMore": "Voir tout mon espace",
+    "seeLess": "Voir moins",
+    "momentumDays": "jour",
+"momentumDays_plural": "jours",
+"momentumActive": "de série active",
+"momentumPaused": "de série"
   },
   "inviteFriends": "Inviter des amis",
   "referral": {
@@ -2344,6 +2357,9 @@
   },
   "shareCardT": {
   "a11yTitle": "Carte de partage du défi",
+  "challengeBtn": "👊 Défier",
+  "challenge": "TitleJe te défie !",
+"challengeMsg": "{{name}} te défie sur \"{{title}}\". Tu relèves ? 👊",
   "dayOf": "Jour {{day}} sur {{total}}",
     "tagline": "Rejoins le défi sur ChallengeTies",
   "a11yHint": "Prévisualise la carte avant de la partager avec tes amis.",
@@ -2803,6 +2819,8 @@
 "exploits": {
 "title": "EXPLOITS",
   "subtitle": "Les hauts faits de la communauté",
+  "emptyFirstToday": "Sois le premier à graver un exploit aujourd'hui 🔥\nMarque un défi pour entrer dans les annales.",
+  "emptyCtaGoMark": "Marquer mon défi",
   "loading": "Consultation des annales…",
   "loadError": "Impossible de charger les exploits.",
   "retry": "Réessayer",
@@ -2824,6 +2842,12 @@
   "dailyMark": "Marqué",
   "dailyMarkSub": "Rigueur quotidienne"
 },
+"system": {
+    "username": "ChallengeTies",
+    "popular100": "🔥 {{count}} personnes relèvent « {{title}} »",
+    "popular20": "⚡ {{count}} personnes relèvent « {{title}} »",
+    "popular2": "👥 {{count}} personnes relèvent « {{title}} »"
+  },
 "label": {
   "completion": "a accompli « {{challenge}} » en {{days}} {{unit}}",
   "milestone7": "7 jours de constance — « {{challenge}} »",
@@ -2837,6 +2861,8 @@
 },
   "notificationsPush": {
     "daily1": "Un défi aujourd’hui peut changer ta journée. Go ?",
+    "partnerCompletedTitle":"🏆 Ton partenaire a terminé !",
+    "partnerCompletedBody":"{{name}} a terminé ses {{days}} jours. Continue, tu peux le faire !",
     "dailyPersonal1": "✅ \"{{title}}\" t'attend aujourd'hui.",
 "dailyPersonal2": "🔥 Un jour de plus sur \"{{title}}\". Go.",
 "dailyPersonal3": "⚡ \"{{title}}\" — 1 clic pour valider.",

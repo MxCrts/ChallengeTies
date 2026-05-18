@@ -609,7 +609,13 @@
     "heroSub": "Everything that makes you stronger, in one place.",
     "sectionsListA11y": "Profile content and section list",
     "noData": "No profile data available.",
-    "interestsLabel": "Interests"
+    "interestsLabel": "Interests",
+    "seeMore": "See all",
+    "seeLess": "See less",
+    "momentumDays": "day",
+"momentumDays_plural": "days",
+"momentumActive": "active streak",
+"momentumPaused": "streak"
   },
   "dailySelectedSubtitleShort": "Today’s selection.",
   "deeplink": {
@@ -630,6 +636,10 @@
       "ready": "Once confirmed: Duo starts"
     }
   },
+  "duo": {
+  "partnerMarked": "{{name}} checked in today. Your turn.",
+  "partnerNotMarked": "{{name}} hasn't checked in yet today."
+},
     "hero": {
       "brand": "ChallengeTies",
       "greeting": "Hey {{name}} 👋",
@@ -1501,6 +1511,10 @@
   "completedOnDate": "Completed on",
   "completion": {
     "rewardLabel": "Reward",
+    "coaching": {
+  "title": "You finished 🏆",
+  "sub": "{{name}} is at {{done}}/{{total}}. Cheer them on."
+},
     "identity": {
    "first":  "First challenge done. You just proved you really start.",
    "second": "Two challenges done. Most people stop at the first.",
@@ -4513,6 +4527,9 @@
   },
   "shareCardT": {
   "a11yTitle": "Challenge share card",
+  "challengeBtn": "👊 Challenge",
+"challengeTitle": "I challenge you!",
+"challengeMsg": "{{name}} is challenging you on \"{{title}}\". You in? 👊",
   "dayOf": "Day {{day}} of {{total}}",
     "tagline": "Join the challenge on ChallengeTies",
   "heldSolo": "I held on",
@@ -4580,6 +4597,14 @@
 "exploits": {
   "title": "EXPLOITS",
   "subtitle": "The community's great feats",
+  "emptyFirstToday": "Be the first to etch an exploit today 🔥\nMark a challenge to enter the annals.",
+"emptyCtaGoMark": "Mark my challenge",
+  "system": {
+  "username": "ChallengeTies",
+  "popular100": "🔥 {{count}} people are taking on \"{{title}}\"",
+  "popular20": "⚡ {{count}} people are taking on \"{{title}}\"",
+  "popular2": "👥 {{count}} people are taking on \"{{title}}\""
+},
   "loading": "Consulting the annals…",
   "loadError": "Unable to load exploits.",
   "retry": "Retry",
@@ -4629,6 +4654,8 @@
 },
   "notificationsPush": {
     "daily1": "One challenge today can change your whole day. Ready?",
+    "partnerCompletedTitle": "🏆 Your partner finished!",
+"partnerCompletedBody": "{{name}} completed {{days}} days. Keep going, you've got this!",
     "dailyPersonal1": "✅ \"{{title}}\" is waiting for you today.",
 "dailyPersonal2": "🔥 One more day on \"{{title}}\". Let's go.",
 "dailyPersonal3": "⚡ \"{{title}}\" — 1 tap to check in.",

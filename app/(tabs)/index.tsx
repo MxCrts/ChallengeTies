@@ -116,6 +116,7 @@ import WeeklyReportModal, { type WeeklyReportData } from "../../components/Weekl
 import ChoixDuoModal from "../../components/ChoixDuoModal";
 import { QUEST_DAILY_BONUS_CLAIMED, QUEST_INVITATION_SENT, QUEST_CHALLENGE_EXPLORED } from "@/src/hooks/useOnboardingQuests";
 import PerformanceLogSheet from "@/components/PerformanceLogSheet";
+import { usePartnerDuoHome } from "@/src/hooks/usePartnerDuoHome";
 
 const getScreen = () => Dimensions.get("window");
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = getScreen();
@@ -190,6 +191,7 @@ interface Challenge {
   imageThumbUrl?: string;
   day?: number;
   approved?: boolean;
+  participantsCount?: number;
 }
 
 type CurrentChallengeItem = {
@@ -338,11 +340,10 @@ function useUtcDayKeyStable() {
   return dayKey;
 }
 
-
 function buildDailyPicksFromBase(
   base: Challenge[],
   cachedDailyRaw: string | null,
-  userId: string | undefined | null
+  userId: string | undefined | null,
 ): Challenge[] {
   if (!base.length) return [];
 
@@ -380,6 +381,19 @@ function buildDailyPicksFromBase(
   if (!picks.length) {
     const seed = hashStringToInt(`${today}#${userId ?? "global"}`);
     picks = seededShuffle(base, seed).slice(0, 5);
+  }
+
+  // ✅ FEATURED : épingler le défi le plus populaire avec image en position 0
+  // Toujours actif — la hero card doit être la meilleure, pas un hasard
+  if (picks.length > 0) {
+    const withImage = picks.filter(c => !!c.imageUrl);
+    const pool = withImage.length > 0 ? withImage : picks;
+    const featured = pool.reduce((best, c) =>
+      (c.participantsCount ?? 0) > (best.participantsCount ?? 0) ? c : best
+    , pool[0]);
+    if (featured && featured.id !== picks[0].id) {
+      picks = [featured, ...picks.filter(c => c.id !== featured.id)];
+    }
   }
 
   return picks;
@@ -1091,6 +1105,14 @@ await new Promise((r) => requestAnimationFrame(() => r(null)));
   );
 }, [user?.uid, duoInvitePending, pendingInvite?.challengeId, duoInvitePendingFor]);
 
+// Challenge duo actif (pas pending, duo confirmé avec partenaire)
+const activeDuoChallenge = useMemo(() => {
+  return activeChallenges.find(
+    (c) => !!c.duo && !!c.duoPartnerId && !hasOutgoingPendingInvite
+  ) ?? null;
+}, [activeChallenges, hasOutgoingPendingInvite]);
+
+const partnerDuoInfo = usePartnerDuoHome(activeDuoChallenge, DAY_UTC);
 
   const todayHubView = useTodayHubState({
   dayUtc: DAY_UTC,
@@ -2061,10 +2083,10 @@ useEffect(() => {
 
       if (base.length) {
         const picks = buildDailyPicksFromBase(
-          base,
-          cachedDaily,
-          user?.uid
-        );
+  base,
+  cachedDaily,
+  user?.uid,
+);
 
         setAllChallenges(base);
         setDailyFive(picks);
@@ -2127,6 +2149,9 @@ return {
   imageThumbUrl,
   day: data?.day,
   approved: data?.approved,
+  participantsCount: typeof data?.participantsCount === "number"
+  ? data.participantsCount
+  : 0,
 };
       });
 
@@ -2134,11 +2159,13 @@ return {
       const seedStr = `${key}#${user?.uid ?? "global"}`;
       const seed = hashStringToInt(seedStr);
 
-      const sorted = fetched
-        .slice()
-        .sort((a, b) => (b.imageUrl ? 1 : 0) - (a.imageUrl ? 1 : 0));
-      const shuffled = seededShuffle(sorted, seed);
-      const picksFresh = shuffled.slice(0, 5);
+      const sorted = fetched.slice().sort((a, b) => (b.imageUrl ? 1 : 0) - (a.imageUrl ? 1 : 0));
+const shuffled = seededShuffle(sorted, seed);
+const picksFresh = buildDailyPicksFromBase(
+  shuffled.slice(0, 5),
+  null,
+  user?.uid,
+);
 
       setAllChallenges(fetched);
       setDailyFive(picksFresh);
@@ -3305,6 +3332,78 @@ setPostWelcomeAbsorbArmed(true);
       />
   )}
           </View>
+          {/* ════ DUO STATUS CARD ════ */}
+          {!!partnerDuoInfo && !!activeDuoChallenge && (
+            <Pressable
+              onPress={() => {
+                const id = activeDuoChallenge.challengeId ?? activeDuoChallenge.id;
+                if (id) safeNavigate(`/challenge-details/${id}`, "home-duo-status-card");
+              }}
+              style={({ pressed }) => ({
+                marginHorizontal: normalize(15),
+                marginBottom: normalize(12),
+                marginTop: normalize(-4),
+                maxWidth: CONTENT_MAX_W,
+                alignSelf: "center",
+                width: "100%",
+                borderRadius: normalize(18),
+                overflow: "hidden",
+                opacity: pressed ? 0.82 : 1,
+                transform: [{ scale: pressed ? 0.985 : 1 }],
+              })}
+            >
+              <View style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: normalize(10),
+                paddingVertical: normalize(12),
+                paddingHorizontal: normalize(14),
+                borderRadius: normalize(18),
+                borderWidth: 1,
+                borderColor: partnerDuoInfo.status === "marked"
+                  ? isDarkMode ? "rgba(249,115,22,0.30)" : "rgba(249,115,22,0.22)"
+                  : isDarkMode ? "rgba(255,255,255,0.10)" : "rgba(2,6,23,0.08)",
+                backgroundColor: partnerDuoInfo.status === "marked"
+                  ? isDarkMode ? "rgba(249,115,22,0.10)" : "rgba(249,115,22,0.06)"
+                  : isDarkMode ? "rgba(30,41,59,0.90)" : "#FFFFFF",
+              }}>
+                {/* Icône état */}
+                <View style={{
+                  width: normalize(36), height: normalize(36),
+                  borderRadius: normalize(18),
+                  alignItems: "center", justifyContent: "center",
+                  backgroundColor: partnerDuoInfo.status === "marked"
+                    ? "rgba(249,115,22,0.18)"
+                    : isDarkMode ? "rgba(255,255,255,0.07)" : "rgba(2,6,23,0.05)",
+                }}>
+                  <Text style={{ fontSize: normalize(18) }}>
+                    {partnerDuoInfo.status === "marked" ? "🔥" : "👀"}
+                  </Text>
+                </View>
+                {/* Texte */}
+                <Text style={{
+                  flex: 1, minWidth: 0,
+                  fontFamily: "Comfortaa_700Bold",
+                  fontSize: normalize(13),
+                  color: isDarkMode ? "rgba(248,250,252,0.92)" : "rgba(11,17,32,0.88)",
+                  includeFontPadding: false,
+                }} numberOfLines={1} ellipsizeMode="tail">
+                  {partnerDuoInfo.status === "marked"
+                    ? t("homeZ.duo.partnerMarked", {
+                        name: partnerDuoInfo.partnerName,
+                        defaultValue: "{{name}} a marqué aujourd'hui. À toi.",
+                      })
+                    : t("homeZ.duo.partnerNotMarked", {
+                        name: partnerDuoInfo.partnerName,
+                        defaultValue: "{{name}} n'a pas encore marqué aujourd'hui.",
+                      })
+                  }
+                </Text>
+                <Ionicons name="chevron-forward" size={normalize(16)}
+                  color={isDarkMode ? "rgba(249,115,22,0.60)" : "rgba(249,115,22,0.55)"} />
+              </View>
+            </Pressable>
+          )}
 
         {/* ════ ONBOARDING QUEST BANNER ════ */}
         

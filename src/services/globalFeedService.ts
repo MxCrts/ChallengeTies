@@ -324,3 +324,103 @@ function docToFeedEvent(d: QueryDocumentSnapshot<DocumentData>): FeedEvent {
     },
   };
 }
+
+// ─── Events système synthétiques ──────────────────────────────────────────────
+
+export type SystemFeedEvent = FeedEvent & { isSystem: true };
+
+/**
+ * Génère des cards système à partir des top challenges par participantsCount.
+ * Appelé côté client au chargement — zéro Firestore write, zéro Cloud Function.
+ */
+export async function fetchSystemFeedEvents(
+  t: (key: string, opts?: any) => string,
+  langKey: string,
+): Promise<SystemFeedEvent[]> {
+  try {
+    const { collection, getDocs, query, where, orderBy, limit } =
+      await import("firebase/firestore");
+
+    const q = query(
+      collection(db, "challenges"),
+      where("approved", "==", true),
+      orderBy("participantsCount", "desc"),
+      limit(5)
+    );
+
+    const snap = await getDocs(q);
+    const results: SystemFeedEvent[] = [];
+
+    snap.docs.forEach((d) => {
+      const data = d.data() as any;
+      const count = Number(data?.participantsCount ?? 0);
+      if (count < 2) return; // pas de card système si moins de 2 participants
+
+      const chatId = typeof data?.chatId === "string" ? data.chatId : null;
+      const rawTitle = String(data?.title || "");
+      const title = chatId
+        ? t(`challenges.${chatId}.title`, { defaultValue: rawTitle })
+        : rawTitle;
+      if (!title) return;
+
+      // Varie le message selon le count
+      let labelKey: string;
+      let defaultValue: string;
+      if (count >= 100) {
+        labelKey = "exploits.system.popular100";
+        defaultValue = `🔥 ${count} personnes relèvent « ${title} »`;
+      } else if (count >= 20) {
+        labelKey = "exploits.system.popular20";
+        defaultValue = `⚡ ${count} personnes relèvent « ${title} »`;
+      } else {
+        labelKey = "exploits.system.popular2";
+        defaultValue = `👥 ${count} personnes relèvent « ${title} »`;
+      }
+
+      const label = t(labelKey, { count, title, defaultValue });
+
+      results.push({
+        isSystem:       true,
+        id:             `system_${d.id}`,
+        uid:            "system",
+        username:       t("exploits.system.username", { defaultValue: "ChallengeTies" }),
+        avatarUrl:      null,
+        type:           "daily_mark" as FeedEventType,
+        challengeId:    d.id,
+        challengeTitle: title,
+        payload:        { completedDays: count, selectedDays: count },
+        createdAt:      new Date(),
+        feedPublic:     true,
+        reactions:      { fire: 0, muscle: 0, fireBy: [], muscleBy: [] },
+        // label pré-calculé pour éviter de le recalculer dans buildLabel
+        _systemLabel:   label,
+      } as any);
+    });
+
+    return results;
+  } catch (e) {
+    __DEV__ && console.warn("[globalFeed] fetchSystemFeedEvents error:", e);
+    return [];
+  }
+}
+
+/**
+ * Intercale les events système dans le feed réel à des positions fixes.
+ * Positions : 2, 6, 11 (jamais en premier, jamais dos à dos).
+ */
+export function mergeSystemEvents(
+  realEvents: FeedEvent[],
+  systemEvents: SystemFeedEvent[],
+): FeedEvent[] {
+  if (!systemEvents.length) return realEvents;
+  const POSITIONS = [2, 6, 11];
+  const result = [...realEvents];
+  let inserted = 0;
+  for (let i = 0; i < systemEvents.length && i < POSITIONS.length; i++) {
+    const pos = POSITIONS[i] + inserted;
+    const clampedPos = Math.min(pos, result.length);
+    result.splice(clampedPos, 0, systemEvents[i]);
+    inserted++;
+  }
+  return result;
+}

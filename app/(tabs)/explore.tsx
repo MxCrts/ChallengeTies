@@ -735,7 +735,7 @@ export default function ExploreScreen() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All");
-  const [originFilter, setOriginFilter] = useState<"Existing" | "Created" | "All">("Existing");
+  const [originFilter, setOriginFilter] = useState<"Existing" | "Created" | "All">("All");
   const [isCategoryModalVisible, setIsCategoryModalVisible] = useState(false);
   const [optimisticSaved, setOptimisticSaved] = useState<Set<string>>(new Set());
   const [userChallengeTranslations, setUserChallengeTranslations] = useState<Record<string, { title?: string; description?: string }>>({});
@@ -1055,10 +1055,10 @@ export default function ExploreScreen() {
   }, []);
 
   const resetFilters = useCallback(() => {
-    setSearchQuery("");
-    setCategoryFilter("All");
-    setOriginFilter("Existing");
-  }, []);
+  setSearchQuery("");
+  setCategoryFilter("All");
+  setOriginFilter("All");
+}, []);
 
   const selectCategory = useCallback((cat: string) => {
     setCategoryFilter(cat);
@@ -1076,12 +1076,12 @@ export default function ExploreScreen() {
   );
 
   const toggleOrigin = useCallback(
-    () =>
-      setOriginFilter((o) =>
-        o === "Existing" ? "Created" : o === "Created" ? "All" : "Existing"
-      ),
-    []
-  );
+  () =>
+    setOriginFilter((o) =>
+      o === "All" ? "Existing" : o === "Existing" ? "Created" : "All"
+    ),
+  []
+);
 
   const scrollTop = useCallback(() => {
     requestAnimationFrame(() => {

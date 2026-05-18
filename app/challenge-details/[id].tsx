@@ -129,6 +129,7 @@ import { DeviceEventEmitter } from "react-native";
 import { QUEST_CHALLENGE_EXPLORED } from "@/src/hooks/useOnboardingQuests";
 import PerformanceLogSheet from "@/components/PerformanceLogSheet";
 import ChallengeJournal from "@/components/ChallengeJournal";
+import { MARK_TOAST_EVENT } from "../../context/CurrentChallengesContext";
 
 const hapticTap = () => {
   Haptics.selectionAsync().catch(() => {});
@@ -514,6 +515,7 @@ const warmupDayKeyLocal = useCallback(() => {
 const duoBarMeWidth = useSharedValue(0);
 const duoBarPartnerWidth = useSharedValue(0);
 const markBtnGlow = useSharedValue(0);
+const markBtnBurst = useSharedValue(1);
 const [descExpanded, setDescExpanded] = useState(false);
 const tabBarHeight = 0;
 
@@ -1036,6 +1038,10 @@ const markBtnGlowStyle = useAnimatedStyle<ViewStyle>(() => ({
      : {}),
    transform: [{ scale: interpolate(markBtnGlow.value, [0, 1], [1, 1.008]) }],
  }));
+
+const markBtnBurstStyle = useAnimatedStyle<ViewStyle>(() => ({
+  transform: [{ scale: markBtnBurst.value }],
+}));
 
 // ✅ REMPLACER PAR :
 useEffect(() => {
@@ -1646,6 +1652,18 @@ useEffect(() => {
     -1, false
   );
 }, [isDisabledMark]);
+
+useEffect(() => {
+  const sub = DeviceEventEmitter.addListener(MARK_TOAST_EVENT, (payload: any) => {
+    if (payload?.kind !== "success") return;
+    markBtnBurst.value = withSpring(0.93, { damping: 10, stiffness: 400 }, () => {
+      markBtnBurst.value = withSpring(1.06, { damping: 12, stiffness: 300 }, () => {
+        markBtnBurst.value = withSpring(1, { damping: 14, stiffness: 200 });
+      });
+    });
+  });
+  return () => sub.remove();
+}, []);
 
   const isSavedChallenge = useCallback((challengeId: string) => savedIds.has(challengeId), [savedIds]);
 
@@ -3463,8 +3481,7 @@ const scrollContentStyle = useMemo(
   );
 })()}
     {/* Animated.View UNIQUEMENT pour le glow/ombre — pas de styles de layout */}
-    <Animated.View style={[
-          !isDisabledMark && markBtnGlowStyle,
+    <Animated.View style={[markBtnBurstStyle, !isDisabledMark && markBtnGlowStyle,
           {
             // Shadow iOS uniquement (markBtnGlowStyle gère shadowOpacity/Radius)
             ...(Platform.OS === "ios" && !isDisabledMark ? {
@@ -3950,6 +3967,21 @@ const scrollContentStyle = useMemo(
   // ── Flow post-complétion top 1 ──
   challengeCategory={challenge?.category || routeCategory || undefined}
   completedChallengesCount={completedChallengesCount}
+  partnerName={
+  isDuo && duoChallengeData?.duoUser?.name
+    ? duoChallengeData.duoUser.name
+    : undefined
+}
+partnerProgress={
+  isDuo &&
+  duoChallengeData?.duoUser?.completedDays !== undefined &&
+  duoChallengeData?.duoUser?.selectedDays
+    ? {
+        done: duoChallengeData.duoUser.completedDays,
+        total: duoChallengeData.duoUser.selectedDays,
+      }
+    : null
+}
   onInviteDuo={!isDuo ? () => {
     setCompletionModalVisible(false);
     setTimeout(() => {
@@ -4037,6 +4069,8 @@ const scrollContentStyle = useMemo(
   visible={shareCardVisible}
   onClose={() => setShareCardVisible(false)}
   challengeTitle={routeTitle || ""}
+  challengeId={id}
+  selectedDays={finalSelectedDays || localSelectedDays || undefined}
   daysCompleted={finalCompletedDays}
   totalDays={finalSelectedDays}
   isDuo={!!isDuo}

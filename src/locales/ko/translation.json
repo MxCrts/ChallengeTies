@@ -1175,6 +1175,10 @@
   "networkError": "네트워크 오류. 다시 시도해 주세요.",
   "completion": {
     "rewardLabel": "보상",
+    "coaching": {
+  "title": "완료했어요 🏆",
+  "sub": "{{name}} 이(가) {{done}}/{{total}}에 있어요. 응원해줘요!"
+},
     "identity": {
       "first":  "첫 번째 챌린지 완료. 진짜 시작한다는 걸 증명했어.",
       "second": "두 개의 챌린지 완료. 대부분은 첫 번째에서 멈춰.",
@@ -1304,7 +1308,13 @@
     "sectionsListA11y": "프로필 내용 및 섹션 목록",
     "noData": "프로필 데이터가 없습니다.",
     "locationLabel": "지역",
-    "interestsLabel": "관심사"
+    "interestsLabel": "관심사",
+    "seeMore": "전체 보기",
+    "seeLess": "접기",
+    "momentumDays": "일",
+"momentumDays_plural": "일",
+"momentumActive": "현재 연속",
+"momentumPaused": "연속"
   },
   "inviteFriends": "친구 초대",
   
@@ -2450,6 +2460,9 @@
   "shareCardT": {
     "dayOf": "{{total}}일 중 {{day}}일째",
   "tagline": "ChallengeTies에서 도전에 참여하세요",
+  "challengeBtn": "👊 도전",
+"challengeTitle": "도전한다!",
+"challengeMsg": "{{name}} 이(가) \"{{title}}\" 에 도전장을 내밀었어. 받아들일래? 👊",
   "a11yTitle": "챌린지 공유 카드",
   "a11yHint": "카드를 친구에게 공유하기 전에 미리보기하세요.",
   "heldSolo": "끝까지 했다",
@@ -2490,6 +2503,14 @@
 "exploits": {
   "title": "위업",
   "subtitle": "커뮤니티의 위대한 업적",
+  "emptyFirstToday": "오늘 첫 번째 위업을 새기는 사람이 되어라 🔥\n도전을 기록하여 역사에 이름을 남겨라.",
+"emptyCtaGoMark": "내 도전 기록하기",
+  "system": {
+  "username": "ChallengeTies",
+  "popular100": "🔥 {{count}}명이 «{{title}}»에 도전 중",
+  "popular20": "⚡ {{count}}명이 «{{title}}»에 도전 중",
+  "popular2": "👥 {{count}}명이 «{{title}}»에 도전 중"
+},
   "loading": "연대기를 열람하는 중…",
   "loadError": "위업을 불러올 수 없습니다.",
   "retry": "다시 시도",
@@ -2539,6 +2560,8 @@
 },
   "notificationsPush": {
     "daily1": "오늘 한 번의 챌린지가 하루를 바꿔. 준비됐어?",
+    "partnerCompletedTitle": "🏆 파트너가 완료했어요!",
+"partnerCompletedBody": "{{name}} 이(가) {{days}}일을 완료했어요. 계속 해봐요, 당신도 할 수 있어요!",
     "dailyPersonal1": "✅ \"{{title}}\"이(가) 오늘 당신을 기다리고 있어요.",
 "dailyPersonal2": "🔥 \"{{title}}\" 또 하루. 가자.",
 "dailyPersonal3": "⚡ \"{{title}}\" — 탭 한 번으로 체크인.",
@@ -2678,6 +2701,10 @@
       "ready": "확인되면: 듀오 시작"
     }
   },
+  "duo": {
+  "partnerMarked": "{{name}} 이(가) 오늘 체크인했어요. 이제 당신 차례예요.",
+  "partnerNotMarked": "{{name}} 이(가) 아직 오늘 체크인하지 않았어요."
+},
     "hero": {
       "brand": "ChallengeTies",
       "greeting": "안녕 {{name}} 👋",

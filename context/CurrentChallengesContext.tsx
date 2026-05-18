@@ -377,7 +377,7 @@ export const CurrentChallengesProvider: React.FC<{
   const { showInterstitials, showRewarded } = useAdsVisibility();
   const pathname = usePathname();
   const { TROPHY, getMicroWeek, incMicroWeek } = useTrophiesEconomy();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   
 
   const isActiveRef = useRef(true);
@@ -2398,20 +2398,33 @@ if (idx === -1) {
         });
       }
 
-      // 7️⃣ Si duo → supprimer le défi du partenaire (comportement actuel conservé)
-      if (isDuo && partnerRef && partnerCurr.length) {
-        const duoKey = toComplete.uniqueKey as string;
-        const pIdx = partnerCurr.findIndex((ch: any) => {
-          if (ch?.uniqueKey === duoKey) return true;
-          const cid = ch?.challengeId ?? ch?.id;
-          return cid === id && Number(ch?.selectedDays) === Number(selectedDays);
-        });
-
-        if (pIdx !== -1) {
-          const pNew = partnerCurr.filter((_x, i) => i !== pIdx);
-          tx.update(partnerRef, { CurrentChallenges: pNew });
-        }
-      }
+      // 7️⃣ Si duo → partenaire continue en SOLO (pas de suppression)
+if (isDuo && partnerRef && partnerCurr.length) {
+  const duoKey = toComplete.uniqueKey as string;
+  const pIdx = partnerCurr.findIndex((ch: any) => {
+    if (ch?.uniqueKey === duoKey) return true;
+    const cid = ch?.challengeId ?? ch?.id;
+    return cid === id && Number(ch?.selectedDays) === Number(selectedDays);
+  });
+  if (pIdx !== -1) {
+    const partnerCh = partnerCurr[pIdx] as any;
+    const baseId = partnerCh?.challengeId ?? partnerCh?.id ?? id;
+    const days = Number(partnerCh?.selectedDays ?? selectedDays);
+    // Recalcule la clé solo (sans pairKey duo)
+    const soloKey = `${baseId}_${days}`;
+    const downgraded = {
+      ...partnerCh,
+      duo: false,
+      duoPartnerId: null,
+      duoPartnerUsername: null,
+      uniqueKey: soloKey,
+    };
+    const pNew = partnerCurr.map((ch: any, i: number) =>
+      i === pIdx ? downgraded : ch
+    );
+    tx.update(partnerRef, { CurrentChallenges: pNew });
+  }
+}
     });
 
     // 8️⃣ Stats supplémentaires / achievements hors transaction
@@ -2423,6 +2436,47 @@ if (idx === -1) {
         (toCompleteSnapshot as any)?.categoryId;
 
       await addCompletedCategory(userId, completedCategory);
+
+      // Notif "ton partenaire a terminé" → MxCrts
+if (toCompleteSnapshot?.duo && toCompleteSnapshot?.duoPartnerId) {
+  try {
+    const partnerId = String(toCompleteSnapshot.duoPartnerId);
+    const partnerSnap = await getDoc(doc(db, "users", partnerId));
+    if (partnerSnap.exists()) {
+      const pd = partnerSnap.data() as any;
+      if (pd.notificationsEnabled !== false && pd.expoPushToken) {
+        const lng = String(pd.language || "en");
+        const mySnap = await getDoc(doc(db, "users", userId));
+        const myName = mySnap.exists()
+          ? String((mySnap.data() as any).username || "Ton partenaire")
+          : "Ton partenaire";
+        await fetch("https://exp.host/--/api/v2/push/send", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            to: pd.expoPushToken,
+            title: i18n.t("notificationsPush.partnerCompletedTitle", {
+              lng,
+              defaultValue: "🏆 Ton partenaire a terminé !",
+            }),
+            body: i18n.t("notificationsPush.partnerCompletedBody", {
+              lng,
+              name: myName,
+              days: selectedDays,
+              defaultValue: `${myName} a terminé ses ${selectedDays} jours. Continue, tu peux le faire !`,
+            }),
+            sound: "default",
+            data: {
+              kind: "partner_completed",
+              challengeId: id,
+              type: "duo_nudge",
+            },
+          }),
+        });
+      }
+    }
+  } catch {}
+}
 
       const isSeasonal = (toCompleteSnapshot as any)?.seasonal === true;
       if (isSeasonal) await recordSeasonalCompleted(userId);

@@ -541,6 +541,10 @@
       "ready": "Как подтвердят: старт дуо"
     }
   },
+  "duo": {
+  "partnerMarked": "{{name}} отметился сегодня. Теперь твоя очередь.",
+  "partnerNotMarked": "{{name}} ещё не отметился сегодня."
+},
     "hero": {
       "brand": "ChallengeTies",
       "greeting": "Привет {{name}} 👋",
@@ -731,7 +735,13 @@
     "heroSub": "Всё, что делает тебя сильнее — в одном месте.",
     "sectionsListA11y": "Содержимое профиля и список разделов",
     "noData": "Данные профиля недоступны.",
-    "interestsLabel": "Интересы"
+    "interestsLabel": "Интересы",
+    "seeMore": "Показать всё",
+    "seeLess": "Свернуть",
+    "momentumDays": "день",
+"momentumDays_plural": "дней",
+"momentumActive": "активная серия",
+"momentumPaused": "серия"
   },
   "vsIntro": {
     "challengeAccepted":"Вызов принят"
@@ -1420,6 +1430,10 @@
   "completedOnDate": "Завершено",
   "completion": {
     "rewardLabel": "Награда",
+    "coaching": {
+  "title": "Ты завершил 🏆",
+  "sub": "{{name}} на {{done}}/{{total}}. Подбодри его!"
+},
     "identity": {
       "first":  "Первый челлендж завершён. Ты только что доказал, что действительно начинаешь.",
       "second": "Два челленджа завершены. Большинство останавливается на первом.",
@@ -4887,6 +4901,9 @@
   "shareCardT": {
     "dayOf": "День {{day}} из {{total}}",
   "tagline": "Присоединяйся к челленджу в ChallengeTies",
+  "challengeBtn": "👊 Вызов",
+"challengeTitle": "Я бросаю тебе вызов!",
+"challengeMsg": "{{name}} бросает тебе вызов в «{{title}}». Принимаешь? 👊",
   "a11yTitle": "Карточка для поделиться вызовом",
   "a11yHint": "Просмотрите карточку перед тем, как отправить её друзьям.",
   "heldSolo": "Я выдержал",
@@ -4926,7 +4943,15 @@
 },
 "exploits": {
   "title": "ПОДВИГИ",
+  "emptyFirstToday": "Будь первым, кто высечет подвиг сегодня 🔥\nОтметь вызов, чтобы войти в анналы.",
+"emptyCtaGoMark": "Отметить мой вызов",
   "subtitle": "Великие деяния сообщества",
+  "system": {
+  "username": "ChallengeTies",
+  "popular100": "🔥 {{count}} человек проходят «{{title}}»",
+  "popular20": "⚡ {{count}} человек проходят «{{title}}»",
+  "popular2": "👥 {{count}} человек проходят «{{title}}»"
+},
   "loading": "Обращение к летописям…",
   "loadError": "Не удалось загрузить подвиги.",
   "retry": "Повторить",
@@ -4976,6 +5001,8 @@
 },
   "notificationsPush": {
     "daily1": "Один челлендж сегодня может изменить твой день. Готов?",
+    "partnerCompletedTitle": "🏆 Твой партнёр завершил!",
+"partnerCompletedBody": "{{name}} завершил {{days}} дней. Продолжай, у тебя всё получится!",
     "dailyPersonal1": "✅ «{{title}}» ждёт тебя сегодня.",
 "dailyPersonal2": "🔥 Ещё один день в «{{title}}». Давай.",
 "dailyPersonal3": "⚡ «{{title}}» — 1 нажатие для отметки.",

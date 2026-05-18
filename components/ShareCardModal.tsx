@@ -1,5 +1,5 @@
 // components/ShareCardModal.tsx
-import React, { useCallback, useMemo, useRef } from "react";
+import React, { useCallback, useMemo, useState, useRef } from "react";
 import {
   Modal,
   View,
@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   Pressable,
   Platform,
+  Share,
   useWindowDimensions,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
@@ -20,6 +21,9 @@ import { Image } from "react-native";
 import { captureRef } from "react-native-view-shot";
 import * as Sharing from "expo-sharing";
 import * as FileSystem from "expo-file-system";
+import { buildUniversalLink, getOrCreateOpenInvitation } from "@/services/invitationService";
+import * as Haptics from "expo-haptics";
+import { auth } from "@/constants/firebase-config";
 
 const withAlpha = (hex: string, a: number) => {
   const clamp = (x: number, min = 0, max = 1) => Math.min(Math.max(x, min), max);
@@ -49,6 +53,8 @@ type Props = {
   userName?: string;
   partnerName?: string;
   partnerDaysCompleted?: number;
+  challengeId?: string;       
+  selectedDays?: number; 
 };
 
 // ✅ Export ratio: 4:5 (1080x1350)
@@ -68,14 +74,43 @@ const ShareCardModal: React.FC<Props> = ({
   userAvatar,
   partnerAvatar,
   partnerDaysCompleted,
+  challengeId,
+  selectedDays,
 }) => {
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
   const isDark = theme === "dark";
   const th: Theme = isDark ? designSystem.darkTheme : designSystem.lightTheme;
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { width: W, height: H } = useWindowDimensions();
   const cardRef = useRef<View>(null);
+
+  const [challenging, setChallenging] = useState(false);
+const handleChallenge = useCallback(async () => {
+  if (!challengeId || !selectedDays || challenging) return;
+  if (!auth.currentUser?.uid) return;
+  setChallenging(true);
+  try {
+    Haptics.selectionAsync().catch(() => {});
+    const { id: inviteId } = await getOrCreateOpenInvitation(challengeId, selectedDays);
+    const url = buildUniversalLink({ challengeId, inviteId, selectedDays, lang: i18n.language });
+    const name = userName || auth.currentUser.displayName || "ChallengeTies";
+    const msg = t("shareCardT.challengeMsg", {
+      name,
+      title: challengeTitle,
+      defaultValue: `{{name}} te défie sur "{{title}}". Tu relèves ? 👊`,
+    }) + "\n" + url;
+    const title = t("shareCardT.challengeTitle", { defaultValue: "Je te défie !" });
+    await Share.share(
+      Platform.OS === "ios" ? { title, message: msg } : { title, message: msg, url },
+      { dialogTitle: title }
+    );
+  } catch (e) {
+    console.warn("handleChallenge error:", e);
+  } finally {
+    setChallenging(false);
+    }
+}, [challengeId, selectedDays, challenging, challengeTitle, userName, t, i18n.language]);
 
   // ✅ Card preview size: computed from available viewport (safe area + actions)
   const IS_TINY = W < 360 || H < 700;
@@ -388,22 +423,28 @@ const ShareCardModal: React.FC<Props> = ({
 
           {/* ✅ ACTIONS (not captured) */}
           <View style={[styles.actions, { width: CARD_W, paddingBottom: Math.max(10, insets.bottom + 6) }]}>
-            <Pressable
-              onPress={handleShare}
-              style={({ pressed }) => [styles.btn, pressed && { opacity: 0.88 }]}
-              accessibilityRole="button"
-            >
-              <Text style={styles.btnText}>{t("shareCardT.shareBtn", { defaultValue: "Partager" })}</Text>
-            </Pressable>
-
-            <Pressable
-              onPress={onClose}
-              style={({ pressed }) => [styles.btnGhost, pressed && { opacity: 0.88 }]}
-              accessibilityRole="button"
-            >
-              <Text style={styles.btnGhostText}>{t("commonS.close", { defaultValue: "Fermer" })}</Text>
-            </Pressable>
-          </View>
+  {/* Bouton "Défier" — deep link viral */}
+  {!!challengeId && !!selectedDays && (
+    <Pressable
+      onPress={handleChallenge}
+      disabled={challenging}
+      style={({ pressed }) => [styles.btn, pressed && { opacity: 0.88 }, challenging && { opacity: 0.55 }]}
+      accessibilityRole="button"
+    >
+      <Text style={styles.btnText}>
+        {challenging ? "..." : t("shareCardT.challengeBtn", { defaultValue: "👊 Défier" })}
+      </Text>
+    </Pressable>
+  )}
+  {/* Bouton "Partager la carte" — capture image */}
+  <Pressable
+    onPress={handleShare}
+    style={({ pressed }) => [styles.btnGhost, pressed && { opacity: 0.88 }]}
+    accessibilityRole="button"
+  >
+    <Text style={styles.btnGhostText}>{t("shareCardT.shareBtn", { defaultValue: "Partager la carte" })}</Text>
+  </Pressable>
+</View>
         </Animated.View>
       </Animated.View>
     </Modal>

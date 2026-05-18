@@ -63,6 +63,10 @@
       "ready": "En cuanto se confirme: empieza el Dúo"
     }
   },
+  "duo": {
+  "partnerMarked": "{{name}} ya marcó hoy. Te toca.",
+  "partnerNotMarked": "{{name}} aún no ha marcado hoy."
+},
     "hero": {
       "brand": "ChallengeTies",
       "greeting": "Hola {{name}} 👋",
@@ -920,7 +924,13 @@
     "interestsLabel": "Intereses",
     "heroSub": "Todo lo que te hace más fuerte, en un solo lugar.",
     "sectionsListA11y": "Contenido del perfil y lista de secciones",
-    "noData": "No hay datos de perfil disponibles."
+    "noData": "No hay datos de perfil disponibles.",
+    "seeMore": "Ver todo",
+    "seeLess": "Ver menos",
+    "momentumDays": "día",
+"momentumDays_plural": "días",
+"momentumActive": "racha activa",
+"momentumPaused": "racha"
   },
   "streak": {
     "confirmReset": {
@@ -1945,6 +1955,10 @@
   "completedOnDate": "Completado el",
   "completion": {
     "rewardLabel": "Recompensa",
+    "coaching": {
+  "title": "¡Has terminado 🏆",
+  "sub": "{{name}} va por {{done}}/{{total}}. ¡Anímale!"
+},
     "identity": {
       "first":  "Primer reto terminado. Acabas de demostrar que realmente empiezas.",
       "second": "Dos retos terminados. La mayoría se detiene en el primero.",
@@ -4929,6 +4943,9 @@
   "rateUs": "Calificar la app",
   "shareCardT": {
   "a11yTitle": "Tarjeta de compartir desafío",
+  "challengeBtn": "👊 Desafiar",
+"challengeTitle": "¡Te desafío!",
+"challengeMsg": "{{name}} te desafía en \"{{title}}\". ¿Lo aceptas? 👊",
   "dayOf": "Día {{day}} de {{total}}",
   "tagline": "Únete al reto en ChallengeTies",
   "heldSolo": "Aguanté",
@@ -4971,7 +4988,15 @@
 },
 "exploits": {
   "title": "HAZAÑAS",
+  "emptyFirstToday": "Sé el primero en grabar una hazaña hoy 🔥\nMarca un desafío para entrar en los anales.",
+"emptyCtaGoMark": "Marcar mi desafío",
   "subtitle": "Las grandes gestas de la comunidad",
+  "system": {
+  "username": "ChallengeTies",
+  "popular100": "🔥 {{count}} personas están en «{{title}}»",
+  "popular20": "⚡ {{count}} personas están en «{{title}}»",
+  "popular2": "👥 {{count}} personas están en «{{title}}»"
+},
   "loading": "Consultando los anales…",
   "loadError": "No se pueden cargar las hazañas.",
   "retry": "Reintentar",
@@ -5021,6 +5046,8 @@
 },
   "notificationsPush": {
     "daily1": "Un reto hoy puede cambiar tu día. ¿Listo?",
+    "partnerCompletedTitle": "🏆 ¡Tu compañero terminó!",
+"partnerCompletedBody": "{{name}} completó {{days}} días. ¡Sigue adelante, tú puedes!",
     "dailyPersonal1": "✅ \"{{title}}\" te espera hoy.",
 "dailyPersonal2": "🔥 Un día más en \"{{title}}\". Vamos.",
 "dailyPersonal3": "⚡ \"{{title}}\" — 1 clic para validar.",

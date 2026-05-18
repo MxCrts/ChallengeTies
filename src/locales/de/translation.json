@@ -63,6 +63,10 @@
       "ready": "Sobald bestätigt: Duo startet"
     }
   },
+  "duo": {
+  "partnerMarked": "{{name}} hat heute abgehakt. Du bist dran.",
+  "partnerNotMarked": "{{name}} hat heute noch nicht abgehakt."
+},
     "hero": {
       "brand": "ChallengeTies",
       "greeting": "Hey {{name}} 👋",
@@ -834,7 +838,13 @@
     "interestsLabel": "Interessen",
     "heroSub": "Alles, was dich stärker macht – an einem Ort.",
     "sectionsListA11y": "Profilinhalt und Abschnittsliste",
-    "noData": "Keine Profildaten verfügbar."
+    "noData": "Keine Profildaten verfügbar.",
+    "seeMore": "Alles anzeigen",
+    "seeLess": "Weniger anzeigen",
+    "momentumDays": "Tag",
+"momentumDays_plural": "Tage",
+"momentumActive": "aktive Serie",
+"momentumPaused": "Serie"
   },
   "vsIntro": {
     "challengeAccepted":"Herausforderung angenommen"
@@ -1485,6 +1495,10 @@
   "completedOnDate": "Abgeschlossen am",
   "completion": {
     "rewardLabel": "Belohnung",
+    "coaching": {
+  "title": "Du hast es geschafft 🏆",
+  "sub": "{{name}} ist bei {{done}}/{{total}}. Feuere ihn an."
+},
     "identity": {
       "first":  "Erste Challenge geschafft. Du hast bewiesen, dass du wirklich anfängst.",
       "second": "Zwei Challenges erledigt. Die meisten hören beim ersten auf.",
@@ -2657,6 +2671,9 @@
   },
   "shareCardT": {
   "a11yTitle": "Challenge-Share-Karte",
+  "challengeBtn": "👊 Herausfordern",
+"challengeTitle": "Ich fordere dich heraus!",
+"challengeMsg": "{{name}} fordert dich bei \"{{title}}\" heraus. Nimmst du an? 👊",
   "dayOf": "Tag {{day}} von {{total}}",
   "tagline": "Mach mit bei der Challenge auf ChallengeTies",
   "heldSolo": "Ich hab durchgehalten",
@@ -2699,6 +2716,14 @@
 },
 "exploits": {
   "title": "HELDENTATEN",
+  "emptyFirstToday": "Sei der Erste, der heute eine Tat einmeißelt 🔥\nMarkiere eine Challenge, um in die Annalen einzugehen.",
+"emptyCtaGoMark": "Meine Challenge markieren",
+  "system": {
+  "username": "ChallengeTies",
+  "popular100": "🔥 {{count}} Personen nehmen an \"{{title}}\" teil",
+  "popular20": "⚡ {{count}} Personen nehmen an \"{{title}}\" teil",
+  "popular2": "👥 {{count}} Personen nehmen an \"{{title}}\" teil"
+},
   "subtitle": "Die Großtaten der Gemeinschaft",
   "loading": "Die Annalen werden konsultiert…",
   "loadError": "Heldentaten konnten nicht geladen werden.",
@@ -2749,6 +2774,8 @@
 },
   "notificationsPush": {
     "daily1": "Eine Challenge heute reicht, um deinen Tag zu drehen. Los?",
+    "partnerCompletedTitle": "🏆 Dein Partner hat abgeschlossen!",
+"partnerCompletedBody": "{{name}} hat {{days}} Tage abgeschlossen. Weiter so, du schaffst das!",
     "dailyPersonal1": "✅ \"{{title}}\" wartet heute auf dich.",
 "dailyPersonal2": "🔥 Noch ein Tag bei \"{{title}}\". Los geht's.",
 "dailyPersonal3": "⚡ \"{{title}}\" — 1 Klick zum Einchecken.",

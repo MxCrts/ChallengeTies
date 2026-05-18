@@ -144,6 +144,11 @@ type Props = {
   challengeCategory?: string;        // pour proposer un défi de la même catégorie
   onInviteDuo?: () => void;          // pour le nudge duo post-complétion
   completedChallengesCount?: number; // pour l'identité cumulative
+  partnerName?: string;        // nom du partenaire si duo asymétrique
+partnerProgress?: {          // progression du partenaire
+  done: number;
+  total: number;
+} | null;
 };
 
 export default function ChallengeCompletionModal({
@@ -151,6 +156,7 @@ export default function ChallengeCompletionModal({
   canShowRewarded = true, rewardedReady = false, rewardedLoading = false,
   onPreloadRewarded, onShowRewarded,
   challengeCategory, onInviteDuo, completedChallengesCount = 0,
+  partnerName, partnerProgress,
 }: Props) {
   const { t, i18n } = useTranslation();
   const router   = useRouter();
@@ -802,6 +808,39 @@ setTimeout(() => { didNavRef.current = false; }, 700);
                 contentContainerStyle={{ gap: GAP, paddingBottom: 4 }}
                 style={{ maxHeight: isTiny ? 280 : isSmall ? 320 : 400 }}
               >
+                {/* ── Bloc coaching duo asymétrique ── */}
+{!!partnerName && !!partnerProgress && partnerProgress.done < partnerProgress.total && (
+  <View style={{
+    flexDirection: "row", alignItems: "flex-start", gap: 10,
+    paddingHorizontal: 12, paddingVertical: 12,
+    borderRadius: 14,
+    backgroundColor: "rgba(99,102,241,0.10)",
+    borderWidth: 1, borderColor: "rgba(99,102,241,0.28)",
+    marginBottom: GAP * 0.5,
+  }}>
+    <Ionicons name="people" size={BTN_FS} color="#6366F1"
+      style={{ flexShrink: 0, marginTop: 2 }} />
+    <View style={{ flex: 1, minWidth: 0, gap: 6 }}>
+      <Text style={{
+        fontFamily: "Comfortaa_700Bold", fontSize: BDY_S,
+        color: "#A5B4FC", lineHeight: BDY_S * 1.4,
+      }}>
+        {t("completion.coaching.title", { defaultValue: "Tu as terminé 🏆" })}
+      </Text>
+      <Text style={{
+        fontFamily: "Comfortaa_400Regular", fontSize: BDY_S - 1,
+        color: "rgba(165,180,252,0.80)", lineHeight: (BDY_S - 1) * 1.45,
+      }}>
+        {t("completion.coaching.sub", {
+          name: partnerName,
+          done: partnerProgress.done,
+          total: partnerProgress.total,
+          defaultValue: `${partnerName} en est à ${partnerProgress.done}/${partnerProgress.total}. Encourage-le.`,
+        })}
+      </Text>
+    </View>
+  </View>
+)}
 
                 {/* Texte identitaire */}
                 <View style={{

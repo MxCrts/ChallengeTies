@@ -560,6 +560,10 @@
       "ready": "Appena confermato: parte il Duo"
     }
   },
+  "duo": {
+  "partnerMarked": "{{name}} ha segnato oggi. Tocca a te.",
+  "partnerNotMarked": "{{name}} non ha ancora segnato oggi."
+},
     "hero": {
       "brand": "ChallengeTies",
       "greeting": "Ciao {{name}} 👋",
@@ -786,7 +790,13 @@
     "sectionsListA11y": "Contenuti del profilo e elenco sezioni",
     "noData": "Nessun dato profilo disponibile.",
     "locationLabel": "Località",
-    "interestsLabel": "Interessi"
+    "interestsLabel": "Interessi",
+    "seeMore": "Vedi tutto",
+    "seeLess": "Vedi meno",
+    "momentumDays": "giorno",
+"momentumDays_plural": "giorni",
+"momentumActive": "serie attiva",
+"momentumPaused": "serie"
   },
   "journal": {
       "sectionTitle": "Diario",
@@ -1839,6 +1849,10 @@
 ,
 "completion": {
   "rewardLabel": "Ricompensa",
+  "coaching": {
+  "title": "Hai finito 🏆",
+  "sub": "{{name}} è a {{done}}/{{total}}. Incoraggialo!"
+},
   "identity": {
       "first":  "Prima sfida completata. Hai appena dimostrato che inizi davvero.",
       "second": "Due sfide completate. La maggior parte si ferma alla prima.",
@@ -4888,6 +4902,9 @@
   "shareCardT": {
     "dayOf": "Giorno {{day}} su {{total}}",
   "tagline": "Unisciti alla sfida su ChallengeTies",
+  "challengeBtn": "👊 Sfida",
+"challengeTitle": "Ti sfido!",
+"challengeMsg": "{{name}} ti sfida su \"{{title}}\". Accetti? 👊",
   "a11yTitle": "Card di condivisione della sfida",
   "heldSolo": "Ho resistito",
     "heldDuo": "Abbiamo resistito",
@@ -4929,7 +4946,15 @@
 },
 "exploits": {
   "title": "IMPRESE",
+  "emptyFirstToday": "Sii il primo a incidere un'impresa oggi 🔥\nSegna una sfida per entrare negli annali.",
+"emptyCtaGoMark": "Segna la mia sfida",
   "subtitle": "Le grandi gesta della comunità",
+  "system": {
+  "username": "ChallengeTies",
+  "popular100": "🔥 {{count}} persone stanno affrontando «{{title}}»",
+  "popular20": "⚡ {{count}} persone stanno affrontando «{{title}}»",
+  "popular2": "👥 {{count}} persone stanno affrontando «{{title}}»"
+},
   "loading": "Consultazione degli annali…",
   "loadError": "Impossibile caricare le imprese.",
   "retry": "Riprova",
@@ -4979,6 +5004,8 @@
 },
   "notificationsPush": {
     "daily1": "Una sfida oggi può cambiarti la giornata. Pronto?",
+    "partnerCompletedTitle": "🏆 Il tuo partner ha finito!",
+"partnerCompletedBody": "{{name}} ha completato {{days}} giorni. Continua, ce la fai!",
     "dailyPersonal1": "✅ \"{{title}}\" ti aspetta oggi.",
 "dailyPersonal2": "🔥 Un altro giorno su \"{{title}}\". Dai.",
 "dailyPersonal3": "⚡ \"{{title}}\" — 1 clic per validare.",

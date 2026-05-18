@@ -537,6 +537,10 @@
       "ready": "确认后：双人模式开始"
     }
   },
+  "duo": {
+  "partnerMarked": "{{name}} 今天已打卡。轮到你了。",
+  "partnerNotMarked": "{{name}} 今天还没打卡。"
+},
     "hero": {
       "brand": "ChallengeTies",
       "greeting": "嗨 {{name}} 👋",
@@ -727,7 +731,13 @@
     "heroSub": "让你更强的一切，都在这里。",
     "sectionsListA11y": "个人资料内容与分区列表",
     "noData": "暂无个人资料数据。",
-    "interestsLabel": "兴趣"
+    "interestsLabel": "兴趣",
+    "seeMore": "查看全部",
+    "seeLess": "收起",
+    "momentumDays": "天",
+"momentumDays_plural": "天",
+"momentumActive": "当前连击",
+"momentumPaused": "连击"
   },
   "notificationsScreen": {
     "title": "邀请与通知",
@@ -1860,6 +1870,10 @@
   "completedOnDate": "完成于",
   "completion": {
     "rewardLabel": "奖励",
+    "coaching": {
+  "title": "你完成了 🏆",
+  "sub": "{{name}} 已完成 {{done}}/{{total}}。为他加油！"
+},
     "identity": {
       "first":  "第一个挑战完成。你刚刚证明了你真的开始了。",
       "second": "两个挑战完成。大多数人在第一个就停下来了。",
@@ -4892,6 +4906,9 @@
   "rateUs": "为应用评分",
   "shareCardT": {
     "dayOf": "第 {{day}} 天 / 共 {{total}} 天",
+    "challengeBtn": "👊 挑战",
+"challengeTitle": "我向你发起挑战！",
+"challengeMsg": "{{name}} 向你发起了「{{title}}」挑战，你敢接吗？👊",
   "tagline": "来 ChallengeTies 一起挑战",
   "a11yTitle": "挑战分享卡片",
   "a11yHint": "分享前先预览卡片。",
@@ -4932,7 +4949,15 @@
 },
 "exploits": {
   "title": "壮举",
+  "emptyFirstToday": "成为今天第一个留下传奇的人 🔥\n标记一个挑战，载入史册。",
+"emptyCtaGoMark": "标记我的挑战",
   "subtitle": "社区的伟大成就",
+  "system": {
+  "username": "ChallengeTies",
+  "popular100": "🔥 {{count}} 人正在挑战「{{title}}」",
+  "popular20": "⚡ {{count}} 人正在挑战「{{title}}」",
+  "popular2": "👥 {{count}} 人正在挑战「{{title}}」"
+},
   "loading": "查阅史册中…",
   "loadError": "无法加载壮举。",
   "retry": "重试",
@@ -4982,6 +5007,8 @@
 },
   "notificationsPush": {
     "daily1": "今天完成一个挑战，就能改变这一天。准备好了吗？",
+    "partnerCompletedTitle": "🏆 你的伙伴完成了！",
+"partnerCompletedBody": "{{name}} 完成了 {{days}} 天。继续加油，你也可以！",
     "dailyPersonal1": "✅「{{title}}」今天在等你。",
 "dailyPersonal2": "🔥「{{title}}」又一天。加油。",
 "dailyPersonal3": "⚡「{{title}}」— 一键打卡。",

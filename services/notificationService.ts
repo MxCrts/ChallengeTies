@@ -64,6 +64,8 @@ function normalizePushKind(data: any): PushKind {
   if (rawType === "duo-lead")                    return "duo_lead";
   if (rawType === "referral_milestone_unlocked") return "referral_milestone_unlocked";
   if (rawType === "referral_new_child")          return "referral_new_child";
+  if (rawKind === "partner_completed") return "unknown"; // géré directement par rawKind dans getPathFromNotificationData
+  if (rawKind === "reaction")          return "unknown"; // idem
   return "unknown";
 }
 
@@ -935,7 +937,12 @@ export function getPathFromNotificationData(data: any): string {
   if (kind === "duo_lead")        return challengeId ? `/challenge-details/${challengeId}` : "/current-challenges";
   if (kind === "invite_status")   return challengeId ? `/challenge-details/${challengeId}` : "/(tabs)";
   if (kind === "duo_nudge")       return challengeId ? `/challenge-details/${challengeId}` : "/current-challenges";
-  if (challengeId)                return `/challenge-details/${challengeId}`;
+  // ✅ partner_completed (item 6 — partenaire a terminé son défi)
+  const rawKind = String(data?.kind || data?.type || "").toLowerCase();
+  if (rawKind === "partner_completed") return challengeId ? `/challenge-details/${challengeId}` : "/current-challenges";
+  // ✅ reaction (quelqu'un a réagi à un exploit)
+  if (rawKind === "reaction") return "/(tabs)/focus";
+  if (challengeId)            return `/challenge-details/${challengeId}`;
   return "/(tabs)";
 }
 

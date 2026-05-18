@@ -197,7 +197,6 @@ export default function Register() {
   const [step, setStep] = useState<RegisterStep>(1);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
   const [username, setUsername] = useState("");
 
   const [usernameStatus, setUsernameStatus] = useState<UsernameStatus>("idle");
@@ -213,14 +212,12 @@ const [socialAuthPhoto, setSocialAuthPhoto] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
   const [errorIsEmailExists, setErrorIsEmailExists] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isOffline, setIsOffline] = useState(false);
   const [reduceMotion, setReduceMotion] = useState(false);
-  const [focusedField, setFocusedField] = useState<"email" | "password" | "confirm" | "username" | null>(null);
+  const [focusedField, setFocusedField] = useState<"email" | "password" | "username" | null>(null);
 
   const emailRef = useRef<TextInput | null>(null);
   const passwordRef = useRef<TextInput | null>(null);
-  const confirmRef = useRef<TextInput | null>(null);
   const usernameRef = useRef<TextInput | null>(null);
   const isMountedRef = useRef(true);
   const submittingRef = useRef(false);
@@ -242,11 +239,9 @@ const [socialAuthPhoto, setSocialAuthPhoto] = useState<string | null>(null);
   const isValidEmail = useCallback((e: string) => /\S+@\S+\.\S+/.test(e), []);
 
   const step1Valid = useMemo(() =>
-    isValidEmail(email.trim()) &&
-    password.trim().length >= 6 &&
-    confirmPassword.trim() === password.trim(),
-    [email, password, confirmPassword, isValidEmail]
-  );
+  isValidEmail(email.trim()) && password.trim().length >= 6,
+  [email, password, isValidEmail]
+);
 
   const step2Valid = useMemo(() =>
     username.trim().length >= 2 &&
@@ -258,8 +253,6 @@ const [socialAuthPhoto, setSocialAuthPhoto] = useState<string | null>(null);
   const focusHint = useMemo(() => {
     if (focusedField === "password")
       return t("passwordHint", { min: passwordRules.min, defaultValue: `Min ${passwordRules.min} caractères.` }) as string;
-    if (focusedField === "confirm")
-      return t("confirmPasswordHint", { defaultValue: "Doit être identique au mot de passe." }) as string;
     if (focusedField === "username") {
       const fmt = validateUsernameFormat(username);
       if (fmt === "invalid_chars") return t("usernameInvalidChars", { defaultValue: "Lettres, chiffres, _, - et . uniquement." }) as string;
@@ -546,7 +539,6 @@ if (userSnap.exists() && userSnap.data()?.username) {
     if (!isValidEmail(email.trim())) { showError(t("invalidEmailFormat") || "Email invalide"); safeHapticsError(); return; }
     if (!password) { showError(t("fillPassword") || "Entre un mot de passe"); safeHapticsError(); return; }
     if (!passwordRules.minOk) { showError(t("weakPassword") || "Mot de passe trop faible."); safeHapticsError(); return; }
-    if (password !== confirmPassword) { showError(t("passwordsDoNotMatch") || "Les mots de passe ne correspondent pas."); safeHapticsError(); return; }
 
     // ── Vérification email déjà utilisé AVANT step 2 ──────────────────────
     submittingRef.current = true;
@@ -573,7 +565,7 @@ if (userSnap.exists() && userSnap.data()?.username) {
     setStep(2);
     animateStepTransition("next");
     setTimeout(() => { usernameRef.current?.focus(); }, 280);
-  }, [loading, isOffline, email, password, confirmPassword, passwordRules.minOk, isValidEmail, showError, safeHapticsError, animateStepTransition, t]);
+  }, [loading, isOffline, email, password, passwordRules.minOk, isValidEmail, showError, safeHapticsError, animateStepTransition, t]);
 
   // ── Step 2 → Firebase ────────────────────────────────────────────────────
   const handleRegister = useCallback(async () => {
@@ -927,37 +919,11 @@ InteractionManager.runAfterInteractions(() => { if (isMountedRef.current) nav.re
                     autoComplete="new-password"
                     testID="password-input"
                     textContentType="newPassword"
-                    returnKeyType="next"
-                    onSubmitEditing={() => confirmRef.current?.focus()}
-                  />
-                  <TouchableOpacity onPress={() => setShowPassword((p) => !p)} style={styles.trailingBtn} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                    <Ionicons name={showPassword ? "eye-off" : "eye"} size={20} color={PRIMARY_COLOR} />
-                  </TouchableOpacity>
-                </View>
-
-                {/* Confirm password */}
-                <View style={styles.inputWrap}>
-                  <Ionicons name="shield-checkmark-outline" size={18} color={PRIMARY_COLOR} style={styles.leadingIcon} />
-                  <TextInput
-                    ref={confirmRef}
-                    placeholder={t("confirmPassword")}
-                    placeholderTextColor="rgba(50,50,50,0.5)"
-                    style={styles.input}
-                    value={confirmPassword}
-                    onChangeText={(v) => { setConfirmPassword(v); if (errorMessage) setErrorMessage(""); }}
-                    onFocus={() => setFocusedField("confirm")}
-                    onBlur={() => setFocusedField((f) => f === "confirm" ? null : f)}
-                    secureTextEntry={!showConfirmPassword}
-                    accessibilityLabel={t("confirmPassword")}
-                    autoComplete="new-password"
-                    testID="confirm-password-input"
-                    textContentType="newPassword"
-                    maxLength={100}
                     returnKeyType="done"
                     onSubmitEditing={step1Valid ? handleStep1Continue : undefined}
                   />
-                  <TouchableOpacity onPress={() => setShowConfirmPassword((p) => !p)} style={styles.trailingBtn} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                    <Ionicons name={showConfirmPassword ? "eye-off" : "eye"} size={20} color={PRIMARY_COLOR} />
+                  <TouchableOpacity onPress={() => setShowPassword((p) => !p)} style={styles.trailingBtn} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                    <Ionicons name={showPassword ? "eye-off" : "eye"} size={20} color={PRIMARY_COLOR} />
                   </TouchableOpacity>
                 </View>
               </>

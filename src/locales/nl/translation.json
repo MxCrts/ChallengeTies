@@ -1209,6 +1209,10 @@
 
   "completion": {
     "rewardLabel": "Beloning",
+    "coaching": {
+  "title": "Je hebt het gehaald 🏆",
+  "sub": "{{name}} zit op {{done}}/{{total}}. Moedig hem aan!"
+},
     "identity": {
       "first":  "Eerste uitdaging voltooid. Je hebt bewezen dat je echt begint.",
       "second": "Twee uitdagingen voltooid. De meeste mensen stoppen bij de eerste.",
@@ -1348,7 +1352,13 @@
     "heroSub": "Alles wat je sterker maakt, op één plek.",
     "sectionsListA11y": "Profielinhoud en sectielijst",
     "noData": "Geen profielgegevens beschikbaar.",
-    "interestsLabel": "Interesses"
+    "interestsLabel": "Interesses",
+    "seeMore": "Alles bekijken",
+    "seeLess": "Minder tonen",
+    "momentumDays": "dag",
+"momentumDays_plural": "dagen",
+"momentumActive": "actieve reeks",
+"momentumPaused": "reeks"
   },
 
   "inviteFriends": "Vrienden uitnodigen",
@@ -2155,6 +2165,9 @@
   "shareCardT": {
     "dayOf": "Dag {{day}} van {{total}}",
   "tagline": "Doe mee met de challenge op ChallengeTies",
+  "challengeBtn": "👊 Uitdagen",
+"challengeTitle": "Ik daag je uit!",
+"challengeMsg": "{{name}} daagt je uit voor \"{{title}}\". Doe je mee? 👊",
     "a11yTitle": "Deelkaart van de uitdaging",
     "a11yHint": "Bekijk de kaart vooraf voordat je die met je vrienden deelt.",
     "heldSolo": "Ik hield vol",
@@ -2580,7 +2593,15 @@
 },
 "exploits": {
   "title": "HELDENDADEN",
+  "emptyFirstToday": "Wees de eerste die vandaag een prestatie graveert 🔥\nMarkeer een uitdaging om de annalen in te gaan.",
+"emptyCtaGoMark": "Mijn uitdaging markeren",
   "subtitle": "De grote daden van de gemeenschap",
+  "system": {
+  "username": "ChallengeTies",
+  "popular100": "🔥 {{count}} mensen doen mee aan «{{title}}»",
+  "popular20": "⚡ {{count}} mensen doen mee aan «{{title}}»",
+  "popular2": "👥 {{count}} mensen doen mee aan «{{title}}»"
+},
   "loading": "De annalen worden geraadpleegd…",
   "loadError": "Heldendaden konden niet worden geladen.",
   "retry": "Opnieuw proberen",
@@ -2630,6 +2651,8 @@
 },
   "notificationsPush": {
      "daily1": "Eén challenge vandaag kan je dag veranderen. Klaar?",
+     "partnerCompletedTitle": "🏆 Je partner heeft het afgerond!",
+"partnerCompletedBody": "{{name}} heeft {{days}} dagen voltooid. Ga door, jij kunt het!",
      "dailyPersonal1": "✅ \"{{title}}\" wacht vandaag op je.",
 "dailyPersonal2": "🔥 Nog een dag bij \"{{title}}\". Kom op.",
 "dailyPersonal3": "⚡ \"{{title}}\" — 1 klik om in te checken.",
@@ -2761,6 +2784,10 @@
       "ready": "Zodra bevestigd: Duo start"
     }
   },
+  "duo": {
+  "partnerMarked": "{{name}} heeft vandaag ingecheckt. Jij bent nu aan de beurt.",
+  "partnerNotMarked": "{{name}} heeft vandaag nog niet ingecheckt."
+},
     "hero": {
       "brand": "ChallengeTies",
       "greeting": "Hey {{name}} 👋",

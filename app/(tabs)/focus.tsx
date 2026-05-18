@@ -22,12 +22,15 @@ import Animated, {
 import { useTranslation } from "react-i18next";
 import { useTheme } from "../../context/ThemeContext";
 import {
-  fetchFeedPage, addReaction, type FeedEvent, type FeedEventType, type FeedReactions,
+  fetchFeedPage, addReaction,
+  fetchSystemFeedEvents, mergeSystemEvents, // ← ajouter
+  type FeedEvent, type FeedEventType, type FeedReactions, type SystemFeedEvent, // ← ajouter SystemFeedEvent
 } from "@/src/services/globalFeedService";
 import { auth } from "@/constants/firebase-config";
 import { sendReactionPushNotification } from "@/services/notificationService";
 import type { QueryDocumentSnapshot, DocumentData } from "firebase/firestore";
 import { completeQuest as completeOnboardingQuest } from "@/src/services/onboardingQuestService";
+import { useRouter } from "expo-router";
 
 /* ─── Responsive ───────────────────────────────────── */
 const { width: SW } = Dimensions.get("window");
@@ -83,6 +86,8 @@ function timeAgo(date: Date, t: (k: string, o?: any) => string): string {
 }
 
 function buildLabel(event: FeedEvent, t: (k: string, o?: any) => string): string {
+  // ✅ Card système : label déjà calculé
+  if ((event as any)._systemLabel) return (event as any)._systemLabel;
   const translatedTitle = event.challengeId
     ? t(`challenges.${event.challengeId}.title`, { defaultValue: "" })
     : "";
@@ -278,6 +283,7 @@ const ExploitStele = React.memo(function ExploitStele({
   event, index, isDark, t,
 }: { event: FeedEvent; index: number; isDark: boolean; t: (k: string, o?: any) => string }) {
   const cfg  = TYPE_CONFIG[event.type] ?? TYPE_CONFIG.daily_mark;
+  const isSystem = !!(event as any).isSystem;
   const isMe = event.uid === auth.currentUser?.uid;
   const label = buildLabel(event, t);
   const time  = timeAgo(event.createdAt, t);
@@ -342,7 +348,9 @@ const ExploitStele = React.memo(function ExploitStele({
         {/* Halo */}
         <Animated.View style={[s.steleGlow, glowStyle, { shadowColor: cfg.glowColor, backgroundColor: cfg.glowColor }]} />
 
-                <View style={[s.stele, { backgroundColor: steleBase, borderColor: cfg.borderAccent + "55" }]}>
+                <View style={[s.stele, { backgroundColor: steleBase, borderColor: isSystem
+  ? GOLD + "70"
+  : cfg.borderAccent + "55", }]}>
 
           {/* Frise haute colorée */}
           <LinearGradient
@@ -356,14 +364,23 @@ const ExploitStele = React.memo(function ExploitStele({
 
             {/* Avatar colonne */}
             <View style={s.avatarCol}>
-              <View style={[s.avatarOuter, { borderColor: cfg.color + "50", backgroundColor: cfg.color + "10" }]}>
-                <Image
-                  source={{ uri: event.avatarUrl || avatarUrl(event.username) }}
-                  style={s.avatar}
-                  contentFit="cover"
-                  cachePolicy="memory-disk"
-                />
-              </View>
+              {isSystem ? (
+  <View style={[s.avatarOuter, {
+    borderColor: GOLD + "50",
+    backgroundColor: GOLD + "10",
+    alignItems: "center",
+    justifyContent: "center",
+  }]}>
+    <Ionicons name="trophy" size={ns(26)} color={GOLD_BRIGHT} />
+  </View>
+) : (
+  <Image
+    source={{ uri: event.avatarUrl || avatarUrl(event.username) }}
+    style={s.avatar}
+    contentFit="cover"
+    cachePolicy="memory-disk"
+  />
+)}
               {/* Médaillon type */}
               <View style={[s.medallion, { backgroundColor: cfg.color, borderColor: isDark ? "#0E0C08" : PARCHMENT }]}>
                 <Ionicons name={cfg.icon as any} size={ns(9)} color={isDark ? "#0E0C08" : "#FFF"} />
@@ -408,6 +425,7 @@ const ExploitStele = React.memo(function ExploitStele({
               </Text>
 
               {/* ── Réactions ── */}
+              {!isSystem && (
               <View style={s.reactRow}>
                 <TouchableOpacity
                   onPress={() => handleReact("fire")}
@@ -436,6 +454,7 @@ const ExploitStele = React.memo(function ExploitStele({
                   )}
                 </TouchableOpacity>
               </View>
+              )}
 
               {/* Bandeau type */}
               <View style={s.typeBandeauRow}>
@@ -486,38 +505,88 @@ const ExploitStele = React.memo(function ExploitStele({
 
 /* ─── Empty State ──────────────────────────────────── */
 const ForumVacuum = ({ isDark, t }: { isDark: boolean; t: (k: string, o?: any) => string }) => {
+  const router = useRouter();
   const floatV = useSharedValue(0);
   const floatDist = -Math.round(8 * SCALE);
+  const pulseV = useSharedValue(1);
+
   useEffect(() => {
     floatV.value = withRepeat(
       withSequence(withTiming(floatDist, { duration: 2200 }), withTiming(0, { duration: 2200 })),
       -1, true
     );
+    pulseV.value = withRepeat(
+      withSequence(withTiming(1.06, { duration: 900, easing: Easing.inOut(Easing.ease) }), withTiming(1, { duration: 900, easing: Easing.inOut(Easing.ease) })),
+      -1, true
+    );
   }, []);
 
   const floatStyle = useAnimatedStyle(() => ({ transform: [{ translateY: floatV.value }] }));
+  const pulseStyle = useAnimatedStyle(() => ({ transform: [{ scale: pulseV.value }] }));
 
   const col = isDark ? "rgba(200,150,40,0.10)" : "rgba(200,150,40,0.08)";
   const brd = isDark ? "rgba(200,150,40,0.28)" : "rgba(200,150,40,0.22)";
+  const subCol = isDark ? "rgba(220,200,150,0.45)" : "rgba(100,75,20,0.50)";
 
   return (
     <Animated.View entering={FadeIn.duration(500)} style={s.emptyWrap}>
       <Animated.View style={[s.emptyIconWrap, floatStyle, { backgroundColor: col, borderColor: brd }]}>
         <Ionicons name="trophy-outline" size={ns(52)} color={GOLD + "80"} />
       </Animated.View>
+
       <Text style={[s.emptyTitle, { color: isDark ? GOLD_PALE : GOLD }]}>
         {t("exploits.emptyTitle", { defaultValue: "Forum Vacuum" })}
       </Text>
-      <Text style={[s.emptySub, { color: isDark ? "rgba(220,200,150,0.45)" : "rgba(100,75,20,0.50)" }]}>
-        {t("exploits.emptySub", { defaultValue: "Aucun exploit n'est encore gravé ici.\nMarque un défi pour entrer dans les annales !" })}
+
+      <Text style={[s.emptySub, { color: subCol }]}>
+        {t("exploits.emptyFirstToday", {
+          defaultValue: "Sois le premier à graver un exploit aujourd'hui 🔥\nMarque un défi pour entrer dans les annales.",
+        })}
       </Text>
+
+      {/* CTA intelligent */}
+      <Animated.View style={[{ marginTop: ns(24) }, pulseStyle]}>
+        <TouchableOpacity
+          onPress={() => router.push("/(tabs)/" as any)}
+          activeOpacity={0.82}
+        >
+          <LinearGradient
+            colors={[GOLD, GOLD_BRIGHT]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: ns(8),
+              paddingVertical: ns(13),
+              paddingHorizontal: ns(22),
+              borderRadius: ns(999),
+              shadowColor: GOLD,
+              shadowOpacity: 0.40,
+              shadowRadius: ns(14),
+              shadowOffset: { width: 0, height: ns(6) },
+              elevation: 6,
+            }}
+          >
+            <Ionicons name="checkmark-circle-outline" size={ns(18)} color={isDark ? MARBLE_DARK : INK} />
+            <Text style={{
+              fontFamily: "Comfortaa_700Bold",
+              fontSize: ns(13.5),
+              color: isDark ? MARBLE_DARK : INK,
+              includeFontPadding: false,
+            }}>
+              {t("exploits.emptyCtaGoMark", { defaultValue: "Marquer mon défi" })}
+            </Text>
+          </LinearGradient>
+        </TouchableOpacity>
+      </Animated.View>
     </Animated.View>
   );
 };
 
 /* ─── Page principale ──────────────────────────────── */
 export default function ExploitsScreen() {
-  const { t }      = useTranslation();
+  const { t, i18n }      = useTranslation();
   const { theme }  = useTheme();
   const isDark     = theme === "dark";
   const insets     = useSafeAreaInsets();
@@ -535,29 +604,41 @@ export default function ExploitsScreen() {
   const bg      = isDark ? MARBLE_DARK : MARBLE_LIGHT;
   const textSec = isDark ? "rgba(220,200,150,0.45)" : "rgba(100,75,20,0.50)";
 
-  const loadFirst = useCallback(async () => {
-    setLoading(true); setError(null);
-    try {
-      const p = await fetchFeedPage(null);
-      setEvents(p.events); lastDocRef.current = p.lastDoc; setHasMore(p.hasMore);
-    } catch { setError(t("exploits.loadError", { defaultValue: "Impossible de charger les exploits." })); }
-    finally { setLoading(false); }
-  }, [t]);
+ const loadFirst = useCallback(async () => {
+  setLoading(true); setError(null);
+  try {
+    const [p, systemEvts] = await Promise.all([
+      fetchFeedPage(null),
+      fetchSystemFeedEvents(t, i18n.language),
+    ]);
+    const merged = mergeSystemEvents(p.events, systemEvts);
+    setEvents(merged);
+    lastDocRef.current = p.lastDoc;
+    setHasMore(p.hasMore);
+  } catch { setError(t("exploits.loadError", { defaultValue: "Impossible de charger les exploits." })); }
+  finally { setLoading(false); }
+}, [t, i18n.language]);
 
   useEffect(() => { loadFirst(); }, [loadFirst]);
 
   useEffect(() => {
-    completeOnboardingQuest("explore_community").catch(() => {});
+    completeOnboardingQuest("explore_challenges").catch(() => {});
   }, []);
 
   const onRefresh = useCallback(async () => {
-    setRefreshing(true);
-    try {
-      const p = await fetchFeedPage(null);
-      setEvents(p.events); lastDocRef.current = p.lastDoc; setHasMore(p.hasMore);
-    } catch {}
-    setRefreshing(false);
-  }, []);
+  setRefreshing(true);
+  try {
+    const [p, systemEvts] = await Promise.all([
+      fetchFeedPage(null),
+      fetchSystemFeedEvents(t, i18n.language),
+    ]);
+    const merged = mergeSystemEvents(p.events, systemEvts);
+    setEvents(merged);
+    lastDocRef.current = p.lastDoc;
+    setHasMore(p.hasMore);
+  } catch {}
+  setRefreshing(false);
+}, [t, i18n.language]);
 
   const loadMore = useCallback(async () => {
     if (loadingMore || !hasMore || !lastDocRef.current) return;

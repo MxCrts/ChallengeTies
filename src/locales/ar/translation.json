@@ -513,6 +513,10 @@
       "ready": "بمجرد التأكيد: يبدأ وضع الثنائي"
     }
   },
+  "duo": {
+  "partnerMarked": "{{name}} سجّل اليوم. دورك الآن.",
+  "partnerNotMarked": "{{name}} لم يسجّل بعد اليوم."
+},
     "hero": {
       "brand": "ChallengeTies",
       "greeting": "أهلاً {{name}} 👋",
@@ -1253,6 +1257,10 @@
   "completedOnDate": "اكتمل في",
   "completion": {
     "rewardLabel": "المكافأة",
+    "coaching": {
+  "title": "لقد أنهيت 🏆",
+  "sub": "{{name}} وصل إلى {{done}}/{{total}}. شجّعه!"
+},
     "identity": {
       "first":  "أول تحدٍّ مكتمل. أثبتَ للتو أنك تبدأ فعلًا.",
       "second": "تحديان مكتملان. معظم الناس يتوقفون عند الأول.",
@@ -4795,6 +4803,9 @@
   },
   "shareCardT": {
   "a11yTitle": "بطاقة مشاركة التحدي",
+  "challengeBtn": "👊 تحدَّ",
+"challengeTitle": "أتحداك!",
+"challengeMsg": "{{name}} يتحداك في \"{{title}}\". هل تقبل التحدي؟ 👊",
   "dayOf": "اليوم {{day}} من {{total}}",
   "tagline": "انضم إلى التحدي على ChallengeTies",
   "a11yHint": "استعرض البطاقة قبل مشاركتها مع أصدقائك.",
@@ -4837,7 +4848,15 @@
 },
 "exploits": {
   "title": "البطولات",
+  "emptyFirstToday": "كن أول من ينقش إنجازًا اليوم 🔥\nسجّل تحديًا لتدخل في السجلات.",
+"emptyCtaGoMark": "تسجيل تحديّي",
   "subtitle": "أعظم إنجازات المجتمع",
+  "system": {
+  "username": "ChallengeTies",
+  "popular100": "🔥 {{count}} شخصًا يخوضون تحدي «{{title}}»",
+  "popular20": "⚡ {{count}} أشخاص يخوضون تحدي «{{title}}»",
+  "popular2": "👥 {{count}} أشخاص يخوضون تحدي «{{title}}»"
+},
   "loading": "جارٍ مراجعة السجلات…",
   "loadError": "تعذّر تحميل البطولات.",
   "retry": "إعادة المحاولة",
@@ -4887,6 +4906,8 @@
 },
   "notificationsPush": {
     "daily1": "تحدٍّ واحد اليوم يكفي لتغيير يومك. جاهز؟",
+    "partnerCompletedTitle": "🏆 أنهى شريكك التحدي!",
+"partnerCompletedBody": "{{name}} أتمّ {{days}} يومًا. واصل، أنت قادر على ذلك!",
     "dailyPersonal1": "✅ «{{title}}» ينتظرك اليوم.",
 "dailyPersonal2": "🔥 يوم آخر في «{{title}}». هيا.",
 "dailyPersonal3": "⚡ «{{title}}» — نقرة واحدة للتأكيد.",
@@ -5048,7 +5069,13 @@
      "heroSub": "كل ما يجعلك أقوى، في مكان واحد.",
     "sectionsListA11y": "محتوى الملف الشخصي وقائمة الأقسام",
     "noData": "لا توجد بيانات للملف الشخصي.",
-    "interestsLabel": "الاهتمامات"
+    "interestsLabel": "الاهتمامات",
+    "seeMore": "عرض الكل",
+    "seeLess": "عرض أقل",
+    "momentumDays": "يوم",
+"momentumDays_plural": "أيام",
+"momentumActive": "سلسلة نشطة",
+"momentumPaused": "سلسلة"
   },
   "addLocationHere": "أضف موقعًا",
   "addInterestsHere": "اختيار الفئات",
