@@ -21,7 +21,6 @@ import { Image } from "react-native";
 import { captureRef } from "react-native-view-shot";
 import * as Sharing from "expo-sharing";
 import * as FileSystem from "expo-file-system";
-import { buildUniversalLink, getOrCreateOpenInvitation } from "@/services/invitationService";
 import * as Haptics from "expo-haptics";
 import { auth } from "@/constants/firebase-config";
 
@@ -84,33 +83,6 @@ const ShareCardModal: React.FC<Props> = ({
   const { t, i18n } = useTranslation();
   const { width: W, height: H } = useWindowDimensions();
   const cardRef = useRef<View>(null);
-
-  const [challenging, setChallenging] = useState(false);
-const handleChallenge = useCallback(async () => {
-  if (!challengeId || !selectedDays || challenging) return;
-  if (!auth.currentUser?.uid) return;
-  setChallenging(true);
-  try {
-    Haptics.selectionAsync().catch(() => {});
-    const { id: inviteId } = await getOrCreateOpenInvitation(challengeId, selectedDays);
-    const url = buildUniversalLink({ challengeId, inviteId, selectedDays, lang: i18n.language });
-    const name = userName || auth.currentUser.displayName || "ChallengeTies";
-    const msg = t("shareCardT.challengeMsg", {
-      name,
-      title: challengeTitle,
-      defaultValue: `{{name}} te défie sur "{{title}}". Tu relèves ? 👊`,
-    }) + "\n" + url;
-    const title = t("shareCardT.challengeTitle", { defaultValue: "Je te défie !" });
-    await Share.share(
-      Platform.OS === "ios" ? { title, message: msg } : { title, message: msg, url },
-      { dialogTitle: title }
-    );
-  } catch (e) {
-    console.warn("handleChallenge error:", e);
-  } finally {
-    setChallenging(false);
-    }
-}, [challengeId, selectedDays, challenging, challengeTitle, userName, t, i18n.language]);
 
   // ✅ Card preview size: computed from available viewport (safe area + actions)
   const IS_TINY = W < 360 || H < 700;
@@ -423,19 +395,6 @@ const handleChallenge = useCallback(async () => {
 
           {/* ✅ ACTIONS (not captured) */}
           <View style={[styles.actions, { width: CARD_W, paddingBottom: Math.max(10, insets.bottom + 6) }]}>
-  {/* Bouton "Défier" — deep link viral */}
-  {!!challengeId && !!selectedDays && (
-    <Pressable
-      onPress={handleChallenge}
-      disabled={challenging}
-      style={({ pressed }) => [styles.btn, pressed && { opacity: 0.88 }, challenging && { opacity: 0.55 }]}
-      accessibilityRole="button"
-    >
-      <Text style={styles.btnText}>
-        {challenging ? "..." : t("shareCardT.challengeBtn", { defaultValue: "👊 Défier" })}
-      </Text>
-    </Pressable>
-  )}
   {/* Bouton "Partager la carte" — capture image */}
   <Pressable
     onPress={handleShare}

@@ -117,12 +117,34 @@ export const TOTAL_TROPHIES = QUEST_DEFINITIONS.reduce(
   0
 ); // = 180
 
+export async function isOnboardingModalSeen(): Promise<boolean> {
+  try {
+    const v = await AsyncStorage.getItem(KEY_MODAL_SEEN);
+    return v === "1";
+  } catch {
+    return false;
+  }
+}
+
+export async function markOnboardingModalSeen(): Promise<void> {
+  try {
+    await AsyncStorage.setItem(KEY_MODAL_SEEN, "1");
+    const uid = auth.currentUser?.uid;
+    if (!uid) return;
+    const { updateDoc } = await import("firebase/firestore");
+    await updateDoc(doc(db, "users", uid), {
+      "onboardingQuests.modalSeen": true,
+    });
+  } catch {}
+}
+
 // ─── Clés AsyncStorage ────────────────────────────────────────────────────────
 
 const KEY_STATE = "onboarding.quest.state.v3";
 const KEY_EXPLORE_COUNT = "onboarding.quest.exploreCount.v3";
 const KEY_DISMISSED = "onboarding.quest.dismissed.v3";
 const KEY_INITIALIZED = "onboarding.quest.initialized.v3";
+const KEY_MODAL_SEEN = "onboarding.modal.seen.v3";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -269,6 +291,10 @@ export async function syncOnboardingFromFirestore(): Promise<void> {
         [KEY_INITIALIZED, "1"],
       ]);
     }
+    const modalSeen = firestoreQuests["modalSeen"] === true;
+if (modalSeen) {
+  await AsyncStorage.setItem(KEY_MODAL_SEEN, "1");
+}
   } catch (e) {
     console.warn("[OnboardingQuest] syncFromFirestore error:", e);
   }

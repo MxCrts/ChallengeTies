@@ -338,23 +338,23 @@ export async function fetchSystemFeedEvents(
   langKey: string,
 ): Promise<SystemFeedEvent[]> {
   try {
-    const { collection, getDocs, query, where, orderBy, limit } =
-      await import("firebase/firestore");
-
-    const q = query(
-      collection(db, "challenges"),
-      where("approved", "==", true),
-      orderBy("participantsCount", "desc"),
-      limit(5)
+    const snap = await getDocs(
+      query(
+        collection(db, "challenges"),
+        orderBy("participantsCount", "desc"),
+        limit(15)
+      )
     );
 
-    const snap = await getDocs(q);
     const results: SystemFeedEvent[] = [];
+    const now = new Date();
+    const hour = now.getHours();
 
-    snap.docs.forEach((d) => {
+    snap.docs.forEach((d, idx) => {
       const data = d.data() as any;
+      if (data?.approved !== true) return;
       const count = Number(data?.participantsCount ?? 0);
-      if (count < 2) return; // pas de card système si moins de 2 participants
+      if (count < 2) return;
 
       const chatId = typeof data?.chatId === "string" ? data.chatId : null;
       const rawTitle = String(data?.title || "");
@@ -363,47 +363,77 @@ export async function fetchSystemFeedEvents(
         : rawTitle;
       if (!title) return;
 
-      // Varie le message selon le count
-      let labelKey: string;
-      let defaultValue: string;
-      if (count >= 100) {
-        labelKey = "exploits.system.popular100";
-        defaultValue = `🔥 ${count} personnes relèvent « ${title} »`;
+      // Seed stable par défi (pas aléatoire au render)
+      const seed = d.id.charCodeAt(0) + d.id.charCodeAt(1 % d.id.length);
+
+      // Contexte temporel
+      const isMorning = hour >= 6 && hour < 12;
+      const isEvening = hour >= 18 && hour < 23;
+
+      // Pool de messages contextuels selon count + position + heure
+      let label: string;
+
+      if (idx === 0) {
+        // Le plus populaire → toujours mis en avant
+        label = t("exploits.system.trending", {
+          title, count,
+          defaultValue: `🏆 Défi tendance · « ${title} » · ${count} participants`,
+        });
+      } else if (count >= 50) {
+        const variants = [
+          t("exploits.system.hot50a", { title, count, defaultValue: `🔥 ${count} personnes relèvent « ${title} » en ce moment` }),
+          t("exploits.system.hot50b", { title, count, defaultValue: `💥 « ${title} » — ${count} challengers actifs` }),
+          t("exploits.system.hot50c", { title, count, defaultValue: `⚡ ${count} participants tiennent le cap sur « ${title} »` }),
+        ];
+        label = variants[seed % variants.length];
       } else if (count >= 20) {
-        labelKey = "exploits.system.popular20";
-        defaultValue = `⚡ ${count} personnes relèvent « ${title} »`;
+        const variants = [
+          t("exploits.system.mid20a", { title, count, defaultValue: `🎯 ${count} challengers sur « ${title} » — tu rejoins ?` }),
+          t("exploits.system.mid20b", { title, count, defaultValue: `💪 « ${title} » — ${count} personnes tiennent le cap` }),
+          t("exploits.system.mid20c", { title, count, defaultValue: `✅ ${count} personnes ont commencé « ${title} » cette semaine` }),
+          t("exploits.system.mid20d", { title, count, defaultValue: `🚀 « ${title} » · ${count} actifs · prêt à les rejoindre ?` }),
+        ];
+        label = variants[seed % variants.length];
       } else {
-        labelKey = "exploits.system.popular2";
-        defaultValue = `👥 ${count} personnes relèvent « ${title} »`;
+        // count entre 2 et 19
+        const timeVariants = isMorning ? [
+          t("exploits.system.morning_a", { title, count, defaultValue: `🌅 ${count} personnes ont démarré « ${title} » aujourd'hui` }),
+          t("exploits.system.morning_b", { title, count, defaultValue: `☀️ Bonne journée pour relever « ${title} » — ${count} déjà lancés` }),
+        ] : isEvening ? [
+          t("exploits.system.evening_a", { title, count, defaultValue: `🌙 ${count} personnes ont continué « ${title} » ce soir` }),
+          t("exploits.system.evening_b", { title, count, defaultValue: `🌟 Terminer la journée avec « ${title} » — ${count} l'ont fait` }),
+        ] : [
+          t("exploits.system.day_a", { title, count, defaultValue: `👥 ${count} personnes relèvent « ${title} »` }),
+          t("exploits.system.day_b", { title, count, defaultValue: `✨ « ${title} » gagne en popularité — ${count} actifs` }),
+          t("exploits.system.day_c", { title, count, defaultValue: `🌱 ${count} challengers ont démarré « ${title} »` }),
+          t("exploits.system.day_d", { title, count, defaultValue: `🎖️ « ${title} » — rejoins les ${count} qui s'y mettent` }),
+        ];
+        label = timeVariants[seed % timeVariants.length];
       }
 
-      const label = t(labelKey, { count, title, defaultValue });
-
       results.push({
-        isSystem:       true,
-        id:             `system_${d.id}`,
-        uid:            "system",
-        username:       t("exploits.system.username", { defaultValue: "ChallengeTies" }),
-        avatarUrl:      null,
-        type:           "daily_mark" as FeedEventType,
-        challengeId:    d.id,
+        isSystem: true,
+        id: `system_${d.id}`,
+        uid: "system",
+        username: t("exploits.system.username", { defaultValue: "ChallengeTies" }),
+        avatarUrl: null,
+        type: "daily_mark" as FeedEventType,
+        challengeId: d.id,
         challengeTitle: title,
-        payload:        { completedDays: count, selectedDays: count },
-        createdAt:      new Date(),
-        feedPublic:     true,
-        reactions:      { fire: 0, muscle: 0, fireBy: [], muscleBy: [] },
-        // label pré-calculé pour éviter de le recalculer dans buildLabel
-        _systemLabel:   label,
+        payload: { completedDays: count, selectedDays: count },
+        createdAt: now,
+        feedPublic: true,
+        reactions: { fire: 0, muscle: 0, fireBy: [], muscleBy: [] },
+        _systemLabel: label,
       } as any);
     });
 
-    return results;
+    return results.slice(0, 5);
   } catch (e) {
     __DEV__ && console.warn("[globalFeed] fetchSystemFeedEvents error:", e);
     return [];
   }
 }
-
 /**
  * Intercale les events système dans le feed réel à des positions fixes.
  * Positions : 2, 6, 11 (jamais en premier, jamais dos à dos).

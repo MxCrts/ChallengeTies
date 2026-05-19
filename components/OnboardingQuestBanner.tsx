@@ -22,6 +22,10 @@ import { useOnboardingQuests } from "@/src/hooks/useOnboardingQuests";
 import type { QuestId } from "@/src/services/onboardingQuestService";
 import { TOTAL_TROPHIES } from "@/src/services/onboardingQuestService";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import {
+  isOnboardingModalSeen,
+  markOnboardingModalSeen,
+} from "@/src/services/onboardingQuestService";
 
 const { width: SW } = Dimensions.get("window");
 const ns = (s: number) => Math.round(s * Math.min(Math.max(SW / 375, 0.82), 1.35));
@@ -30,6 +34,7 @@ const ORANGE = "#F97316";
 const GOLD = "#E8B84B";
 const GREEN = "#22C55E";
 const MODAL_SHOWN_KEY = "onboarding.modal.shown.v3";
+const BANNER_SEEN_KEY = "onboarding.banner.seen.v1";
 
 if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -346,12 +351,19 @@ const CompletionBanner = React.memo(function CompletionBanner({ isDark }: { isDa
 // ─── OnboardingModal ──────────────────────────────────────────────────────────
 const OnboardingModal = React.memo(function OnboardingModal({
   visible, onClose, onQuestPress, isDark, streakCurrent,
+  state, completedCount, totalCount, progressPct,
 }: {
-  visible: boolean; onClose: () => void; onQuestPress: (questId: QuestId) => void;
-  isDark: boolean; streakCurrent: number;
+  visible: boolean;
+  onClose: () => void;
+  onQuestPress: (questId: QuestId) => void;
+  isDark: boolean;
+  streakCurrent: number;
+  state: any;
+  completedCount: number;
+  totalCount: number;
+  progressPct: number;
 }) {
   const { t } = useTranslation();
-  const { state, completedCount, totalCount, progressPct } = useOnboardingQuests();
   const cardScale = useSharedValue(0.88);
   const cardOpacity = useSharedValue(0);
 
@@ -505,6 +517,26 @@ export default function OnboardingQuestBanner({
   const [modalVisible, setModalVisible] = useState(false);
  const [bannerExpanded, setBannerExpanded] = useState(false);
 
+useEffect(() => {
+  if (!visible) return;
+  if (welcomeVisible) return;
+
+  let cancelled = false;
+  isOnboardingModalSeen().then((seen) => {
+    if (!seen && !cancelled) {
+      const timer = setTimeout(() => {
+        if (!cancelled) {
+          setModalVisible(true);
+          markOnboardingModalSeen().catch(() => {});
+        }
+      }, 1200);
+      return () => clearTimeout(timer);
+    }
+  }).catch(() => {});
+
+  return () => { cancelled = true; };
+}, [visible, welcomeVisible]);
+
 const toggleBanner = useCallback(() => {
   LayoutAnimation.configureNext(
     LayoutAnimation.create(240, "easeInEaseOut", "opacity")
@@ -548,28 +580,6 @@ useEffect(() => {
 }, [state, streakCurrent, complete]);
   const pulseStyle = useAnimatedStyle(() => ({ transform: [{ scale: pulseV.value }] }));
 
-  // FIX CRITIQUE : auto-open bloqué tant que welcomeVisible est true
-  // On attend que le WelcomeBonusModal soit fermé pour ouvrir le banner modal
-  useEffect(() => {
-  if (!visible) return;
-  if (welcomeVisible) return;
-
-  let cancelled = false;
-  AsyncStorage.getItem(MODAL_SHOWN_KEY).then((v) => {
-    if (v !== "1" && !cancelled) {
-      const timer = setTimeout(() => {
-        if (!cancelled) {
-          setModalVisible(true);
-          AsyncStorage.setItem(MODAL_SHOWN_KEY, "1").catch(() => {});
-        }
-      }, 1200);
-      // cleanup si welcomeVisible change entre temps
-      return () => { cancelled = true; clearTimeout(timer); };
-    }
-  }).catch(() => {});
-
-  return () => { cancelled = true; };
-}, [visible, welcomeVisible]);
 
   if (!visible || !state) return null;
 
@@ -588,12 +598,16 @@ useEffect(() => {
   return (
   <>
     <OnboardingModal
-      visible={modalVisible}
-      onClose={() => setModalVisible(false)}
-      onQuestPress={onQuestPress}
-      isDark={isDark}
-      streakCurrent={streakCurrent}
-    />
+  visible={modalVisible}
+  onClose={() => setModalVisible(false)}
+  onQuestPress={onQuestPress}
+  isDark={isDark}
+  streakCurrent={streakCurrent}
+  state={state}
+  completedCount={completedCount}
+  totalCount={totalCount}
+  progressPct={progressPct}
+/>
 
     <View style={{
       marginHorizontal: ns(12),

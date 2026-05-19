@@ -1811,6 +1811,7 @@ const calendarDays = useMemo(() => {
         daysOptions: challengeData.daysOptions || [7,14,21,30,60,90,180,365],
         chatId: challengeData.chatId || id,
         imageUrl: challengeData.imageUrl || "",
+        creatorId: challengeData.creatorId || null,
       },
       localSelectedDays
     );
@@ -1924,6 +1925,7 @@ const handleSaveChallenge = useCallback(async () => {
       daysOptions: d.daysOptions || [7,14,21,30,60,90,180,365],
       chatId: d.chatId || id,
       imageUrl: d.imageUrl || "",
+      creatorId: d.creatorId || null,
     };
 
     if (wasSaved) await removeChallenge(id);

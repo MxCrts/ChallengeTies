@@ -115,8 +115,8 @@ import ForgeIntentionModal from "../../components/ForgeIntentionModal";
 import WeeklyReportModal, { type WeeklyReportData } from "../../components/WeeklyReportModal";
 import ChoixDuoModal from "../../components/ChoixDuoModal";
 import { QUEST_DAILY_BONUS_CLAIMED, QUEST_INVITATION_SENT, QUEST_CHALLENGE_EXPLORED } from "@/src/hooks/useOnboardingQuests";
-import PerformanceLogSheet from "@/components/PerformanceLogSheet";
 import { usePartnerDuoHome } from "@/src/hooks/usePartnerDuoHome";
+import { translateChallenge } from "../../services/translationService";
 
 const getScreen = () => Dimensions.get("window");
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = getScreen();
@@ -192,6 +192,7 @@ interface Challenge {
   day?: number;
   approved?: boolean;
   participantsCount?: number;
+  creatorId?: string | null;
 }
 
 type CurrentChallengeItem = {
@@ -2152,6 +2153,7 @@ return {
   participantsCount: typeof data?.participantsCount === "number"
   ? data.participantsCount
   : 0,
+  creatorId: data?.creatorId || null,
 };
       });
 
@@ -2159,16 +2161,59 @@ return {
       const seedStr = `${key}#${user?.uid ?? "global"}`;
       const seed = hashStringToInt(seedStr);
 
-      const sorted = fetched.slice().sort((a, b) => (b.imageUrl ? 1 : 0) - (a.imageUrl ? 1 : 0));
-const shuffled = seededShuffle(sorted, seed);
-const picksFresh = buildDailyPicksFromBase(
-  shuffled.slice(0, 5),
-  null,
-  user?.uid,
+      // Remplace ces 3 lignes par :
+const sorted = fetched.slice().sort((a, b) => 
+  (b.participantsCount ?? 0) - (a.participantsCount ?? 0)
 );
+
+// Top 3 les plus populaires avec image → candidats featured
+const featuredCandidates = sorted
+  .filter(c => !!c.imageUrl && (
+    Array.isArray((c as any).daysOptions)
+      ? Math.min(...(c as any).daysOptions) <= 21
+      : true
+  ))
+  .slice(0, 3);
+
+// Shuffle le reste pour les 4 slots suivants
+const rest = fetched.filter(c => 
+  !featuredCandidates.find(f => f.id === c.id)
+);
+const shuffledRest = seededShuffle(rest, seed);
+
+// Featured = le plus populaire parmi les candidats légers
+const featured = featuredCandidates[0];
+const others = seededShuffle(
+  featuredCandidates.slice(1).concat(shuffledRest),
+  seed
+).slice(0, 4);
+
+const picksFresh = featured
+  ? [featured, ...others]
+  : seededShuffle(fetched, seed).slice(0, 5);
 
       setAllChallenges(fetched);
       setDailyFive(picksFresh);
+
+      // ── Traduction lazy des challenges user-created ──────────────────────────
+InteractionManager.runAfterInteractions(() => {
+  const lang = i18n.language;
+  fetched.filter(c => !!c.creatorId).forEach(async (c) => {
+    const result = await translateChallenge(c.id, lang);
+    if (!result?.title) return;
+    setAllChallenges(prev => prev.map(ch =>
+      ch.id === c.id
+        ? { ...ch, title: result.title || ch.title, description: result.description || ch.description }
+        : ch
+    ));
+    setDailyFive(prev => prev.map(ch =>
+      ch.id === c.id
+        ? { ...ch, title: result.title || ch.title, description: result.description || ch.description }
+        : ch
+    ));
+  });
+});
+
 
       Promise.allSettled([
         AsyncStorage.setItem(CHALLENGES_CACHE_KEY, JSON.stringify(fetched)),
@@ -3328,7 +3373,7 @@ setPostWelcomeAbsorbArmed(true);
         primaryCtaRef={markCtaRef}
         primaryAnimatedStyle={markAnimStyle}
         onPickSolo={onPickSolo}
-        onInviteDuo={handleInviteFriendPress}
+        onInviteDuo={!activeDuoChallenge ? handleInviteFriendPress : undefined}
       />
   )}
           </View>
@@ -3387,7 +3432,7 @@ setPostWelcomeAbsorbArmed(true);
                   fontSize: normalize(13),
                   color: isDarkMode ? "rgba(248,250,252,0.92)" : "rgba(11,17,32,0.88)",
                   includeFontPadding: false,
-                }} numberOfLines={1} ellipsizeMode="tail">
+                }} numberOfLines={2} ellipsizeMode="tail">
                   {partnerDuoInfo.status === "marked"
                     ? t("homeZ.duo.partnerMarked", {
                         name: partnerDuoInfo.partnerName,

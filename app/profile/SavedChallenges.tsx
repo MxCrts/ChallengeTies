@@ -47,6 +47,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAdsVisibility } from "../../src/context/AdsVisibilityContext";
 import { Image as ExpoImage } from "expo-image";
 import type { ListRenderItem } from "react-native";
+import { translateChallenge } from "../../services/translationService";
 
 const SPACING = 18;
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
@@ -88,6 +89,7 @@ interface Challenge {
   category?: string;
   imageUrl?: string;
   daysOptions?: number[];
+  creatorId?: string | null;
 }
 
 type SwipeableHandle = { close: () => void } | null;
@@ -132,6 +134,26 @@ export default function SavedChallengesScreen() {
   const toastOpacity = useSharedValue(0);
   const toastTranslateY = useSharedValue(-10);
   const [reduceMotion, setReduceMotion] = useState(false);
+  const [userChallengeTranslations, setUserChallengeTranslations] = useState<Record<string, { title?: string; description?: string }>>({});
+
+const translatingRef = useRef<Set<string>>(new Set());
+
+useEffect(() => {
+  const userCreated = savedChallenges.filter((c: any) => !!c.creatorId);
+  if (!userCreated.length) return;
+  const lang = i18n.language;
+  userCreated.forEach(async (c: any) => {
+    const key = `${c.id}:${lang}`;
+    if (translatingRef.current.has(key)) return;
+    translatingRef.current.add(key);
+    const result = await translateChallenge(c.id, lang);
+    if (!result) { translatingRef.current.delete(key); return; }
+    setUserChallengeTranslations(prev => ({
+      ...prev,
+      [key]: { title: result.title, description: result.description },
+    }));
+  });
+}, [savedChallenges, i18n.language]);
 
   // Respect reduce motion
   useEffect(() => {
@@ -204,21 +226,29 @@ export default function SavedChallengesScreen() {
       ).values()
     );
 
-    return uniqueArr.map((item) => ({
-      ...item,
-      title: item.chatId
-        ? t(`challenges.${item.chatId}.title`, { defaultValue: item.title })
-        : item.title,
-      description: item.chatId
-        ? t(`challenges.${item.chatId}.description`, {
-            defaultValue: item.description || "",
-          })
-        : item.description || "",
-      category: item.category
-        ? t(`categories.${item.category}`, { defaultValue: item.category })
-        : t("miscellaneous"),
-    }));
-  }, [savedChallenges, i18n.language, t]);
+   return uniqueArr.map((item) => {
+  const isUserCreated = !!(item as any).creatorId;
+  const tKey = `${item.id}:${i18n.language}`;
+  const trans = isUserCreated ? userChallengeTranslations[tKey] : null;
+
+  return {
+    ...item,
+    title: isUserCreated
+      ? (trans?.title || item.title)
+      : (item.chatId
+          ? t(`challenges.${item.chatId}.title`, { defaultValue: item.title })
+          : item.title),
+    description: isUserCreated
+      ? (trans?.description || item.description || "")
+      : (item.chatId
+          ? t(`challenges.${item.chatId}.description`, { defaultValue: item.description || "" })
+          : item.description || ""),
+    category: item.category
+      ? t(`categories.${item.category}`, { defaultValue: item.category })
+      : t("miscellaneous"),
+  };
+});
+  }, [savedChallenges, i18n.language, userChallengeTranslations, t]);
 
   useEffect(() => {
     setLocalChallenges(translatedChallenges);

@@ -124,22 +124,6 @@ export function useOnboardingQuests() {
       setState((prev) => (prev ? { ...prev, dismissed: true } : prev));
   }, []);
 
-  // ─── Mount + AppState polling ─────────────────────────────────────────────
-
-  useEffect(() => {
-    mountedRef.current = true;
-    load();
-
-    const sub = AppState.addEventListener("change", (status: AppStateStatus) => {
-      if (status === "active") load();
-    });
-
-    return () => {
-      mountedRef.current = false;
-      sub.remove();
-    };
-  }, [load]);
-
   // ─── Trigger : FIRST_MARK_EVENT → mark_first_day ─────────────────────────
 
   useEffect(() => {

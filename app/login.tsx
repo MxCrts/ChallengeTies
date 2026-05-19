@@ -643,8 +643,12 @@ const styles = StyleSheet.create({
   card: { width: CARD_W, backgroundColor: COLORS.inputBg, borderRadius: normalize(22), padding: SPACING, shadowColor: COLORS.primary, shadowOpacity: 0.18, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 6, borderWidth: 1, borderColor: COLORS.border, backdropFilter: "blur(8px)" as any },
   errorBanner: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "#E11D48", borderRadius: 12, paddingVertical: 10, paddingHorizontal: 12, marginBottom: 10 },
   errorBannerText: { color: "#fff", fontSize: normalize(13), fontFamily: "Comfortaa_700Bold", flexShrink: 1 },
-  socialButton: { width: "100%", flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, backgroundColor: "#fff", borderWidth: 1.5, borderColor: COLORS.border, borderRadius: normalize(16), paddingVertical: normalize(13), marginBottom: normalize(10), shadowColor: "#000", shadowOpacity: 0.06, shadowRadius: 4, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
-  socialButtonText: { fontSize: normalize(15), fontFamily: "Comfortaa_700Bold", color: COLORS.text },
+  socialButton: { width: "100%", flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, backgroundColor: "#F97316", // orange brand
+borderWidth: 0,
+paddingVertical: normalize(16), // plus haut
+shadowColor: "#F97316",
+shadowOpacity: 0.35, borderRadius: normalize(16), marginBottom: normalize(10), shadowRadius: 4, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
+  socialButtonText: { fontSize: normalize(15), fontFamily: "Comfortaa_700Bold", color: "#fff", },
   appleButton: { width: "100%", height: normalize(50), marginBottom: normalize(10) },
   dividerRow: { flexDirection: "row", alignItems: "center", marginVertical: 12, gap: 10 },
   divider: { flex: 1, height: 1, backgroundColor: COLORS.border },

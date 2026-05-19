@@ -618,10 +618,22 @@ if (userSnap.exists() && userSnap.data()?.username) {
     let existingSnap;
     try { existingSnap = await getDoc(userRef); } catch {}
     const existingData = existingSnap?.exists() ? (existingSnap.data() as any) : null;
-    const alreadyDecided = existingData?.pioneerRewardGranted === true || existingData?.isPioneer === true;
+    const alreadyDecided = socialAuthUid
+  ? existingData?.pioneerRewardGranted === true  // social : seulement si explicitement granted
+  : (existingData?.pioneerRewardGranted === true || existingData?.isPioneer === true);
     let pioneer = { granted: false, pioneerNumber: null as number | null, limit: 1000 };
-    if (!alreadyDecided) { try { pioneer = await grantPioneerIfAvailable(); } catch {} }
-    const isPioneerGrantedNow = pioneer.granted === true;
+    if (!alreadyDecided) {
+  try {
+    pioneer = await grantPioneerIfAvailable();
+  } catch (e) {
+    __DEV__ && console.warn("[pioneer] grantPioneerIfAvailable failed:", e);
+    // Retry une fois
+    try {
+      pioneer = await grantPioneerIfAvailable();
+    } catch {}
+  }
+}
+const isPioneerGrantedNow = pioneer.granted === true;
 
     const result = await reserveUsernameAtomic(userId, trimmedUsername, (tx) => {
       if (!existingSnap || !existingSnap.exists()) {
@@ -844,7 +856,7 @@ InteractionManager.runAfterInteractions(() => { if (isMountedRef.current) nav.re
                     <ActivityIndicator color={TEXT_COLOR} size="small" />
                   ) : (
                     <>
-                      <Ionicons name="logo-google" size={18} color={TEXT_COLOR} />
+                      <Ionicons name="logo-google" size={20} color="#fff" />
                       <Text style={styles.socialButtonText}>
   {t("auth.continueWithGoogle")}
 </Text>
@@ -864,7 +876,7 @@ InteractionManager.runAfterInteractions(() => { if (isMountedRef.current) nav.re
 
                 <View style={styles.dividerRow}>
                   <View style={styles.divider} />
-                  <Text style={styles.dividerText}>{t("or")}</Text>
+                  <Text style={styles.dividerText}>{t("or") || "ou continuer avec un email"}</Text>
                   <View style={styles.divider} />
                 </View>
 
@@ -1048,8 +1060,12 @@ const styles = StyleSheet.create({
   step2Intro: { fontSize: normalize(20), fontFamily: "Comfortaa_700Bold", color: TEXT_COLOR, marginBottom: normalize(16), lineHeight: normalize(26) },
 
   // Social
-  socialButton: { width: "100%", flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, backgroundColor: "#fff", borderWidth: 1.5, borderColor: "rgba(0,0,0,0.08)", borderRadius: normalize(16), paddingVertical: normalize(13), marginBottom: normalize(10), shadowColor: "#000", shadowOpacity: 0.06, shadowRadius: 4, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
-  socialButtonText: { fontSize: normalize(15), fontFamily: "Comfortaa_700Bold", color: TEXT_COLOR },
+  socialButton: { width: "100%", flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, backgroundColor: "#F97316", // orange brand
+borderWidth: 0,
+paddingVertical: normalize(16), // plus haut
+shadowColor: "#F97316",
+shadowOpacity: 0.35, borderRadius: normalize(16), marginBottom: normalize(10), shadowRadius: 4, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
+  socialButtonText: { fontSize: normalize(15), fontFamily: "Comfortaa_700Bold", color: "#fff", },
   appleButton: { width: "100%", height: normalize(50), marginBottom: normalize(10) },
   dividerRow: { flexDirection: "row", alignItems: "center", marginVertical: 12, gap: 10 },
   divider: { flex: 1, height: 1, backgroundColor: "rgba(0,0,0,0.08)" },

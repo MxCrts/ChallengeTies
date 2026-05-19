@@ -107,6 +107,7 @@ interface Challenge {
   imageUrl?: string;
   daysOptions: number[];
   chatId: string;
+  creatorId?: string | null;
 }
 
 // ➕ Ajoute l'utilisateur aux participants du défi global (idempotent)
@@ -328,6 +329,7 @@ export interface CurrentChallenge extends Challenge {
   slug?: string;
   seasonal?: boolean;
   categoryId?: string;
+  creatorId?: string | null;
 }
 
 interface CurrentChallengesContextType {
@@ -1089,6 +1091,7 @@ try {
               duoPartnerId: options.duoPartnerId,
             }
           : {}),
+          creatorId: challenge.creatorId ?? null,
       };
 
       await updateDoc(userRef, {
@@ -1342,7 +1345,55 @@ try {
   }
 } catch {}
 
+// ✅ Schedule notif 9h demain vers MOI si mon partenaire vient de marquer et moi pas
+defer(async () => {
+  try {
+    if (!isDuoMarked || !canonicalUniqueKey || !duoPartnerId || !canonicalChallengeId) return;
 
+    const mySnap = await getDoc(doc(db, "users", userId));
+    if (!mySnap.exists()) return;
+    const myList = Array.isArray((mySnap.data() as any)?.CurrentChallenges)
+      ? (mySnap.data() as any).CurrentChallenges
+      : [];
+    const myEntry = myList.find((c: any) => c?.uniqueKey === canonicalUniqueKey);
+    if (!myEntry) return;
+
+    if (hasMarkedKey(myEntry, todayKey)) return;
+
+    const storageKey = `notif.duo.morning.${canonicalUniqueKey}.${todayKey}`;
+    const already = await AsyncStorage.getItem(storageKey);
+    if (already === "1") return;
+
+    const partnerSnap = await getDoc(doc(db, "users", duoPartnerId));
+    const partnerName = partnerSnap.exists()
+      ? String((partnerSnap.data() as any)?.username || "Ton partenaire")
+      : "Ton partenaire";
+
+    const tomorrow9h = new Date();
+    tomorrow9h.setDate(tomorrow9h.getDate() + 1);
+    tomorrow9h.setHours(9, 0, 0, 0);
+
+    const { scheduleNotificationAsync } = await import("expo-notifications");
+    await scheduleNotificationAsync({
+      content: {
+        title: "ChallengeTies",
+        body: i18n.t("notificationsPush.duoMorningNudge", {
+          name: partnerName,
+          defaultValue: `🔥 ${partnerName} a validé hier soir. Tu tiens ta promesse ?`,
+        }),
+        sound: "default",
+        data: {
+          kind: "duo_nudge",
+          challengeId: canonicalChallengeId,
+          uniqueKey: canonicalUniqueKey,
+        },
+      },
+      trigger: tomorrow9h as any,
+    });
+
+    await AsyncStorage.setItem(storageKey, "1");
+  } catch {}
+});
 
 
       if (missedDays >= 2) {

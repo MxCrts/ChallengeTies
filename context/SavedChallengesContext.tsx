@@ -25,6 +25,7 @@ export interface Challenge {
   imageUrl?: string | null;
   daysOptions?: number[];
   chatId?: string;
+  creatorId?: string | null;
 }
 
 interface SavedChallengesContextType {
@@ -115,18 +116,17 @@ export const SavedChallengesProvider: React.FC<{
             const challenges = Array.isArray(userData.SavedChallenges) ? userData.SavedChallenges : [];
             // normalisation + DÉDUP strict par id (Map)
             const normalized = challenges.map((challenge: any) => ({
-              id: challenge.id || "unknown",
-              title: challenge.title || "Sans titre",
-              category: challenge.category || null,
-              description: challenge.description || null,
-              imageUrl: challenge.imageUrl || null,
-              daysOptions:
-                Array.isArray(challenge.daysOptions) &&
-                challenge.daysOptions.length > 0
-                  ? challenge.daysOptions
-                  : [7],
-              chatId: challenge.chatId || `chat_${challenge.id}`,
-            }));
+  id: challenge.id || "unknown",
+  title: challenge.title || "Sans titre",
+  category: challenge.category || null,
+  description: challenge.description || null,
+  imageUrl: challenge.imageUrl || null,
+  daysOptions: Array.isArray(challenge.daysOptions) && challenge.daysOptions.length > 0
+    ? challenge.daysOptions
+    : [7],
+  chatId: challenge.chatId || `chat_${challenge.id}`,
+  creatorId: challenge.creatorId || null, // ← AJOUTE
+}));
             const validChallenges = Array.from(
               new Map(normalized.map((c: Challenge) => [c.id, c])).values()
             );
@@ -189,18 +189,17 @@ export const SavedChallengesProvider: React.FC<{
         
         const challenges = userData.SavedChallenges || [];
         const validChallenges = challenges.map((challenge: any) => ({
-          id: challenge.id || "unknown",
-          title: challenge.title || "Sans titre",
-          category: challenge.category || null,
-          description: challenge.description || null,
-          imageUrl: challenge.imageUrl || null,
-          daysOptions:
-            Array.isArray(challenge.daysOptions) &&
-            challenge.daysOptions.length > 0
-              ? challenge.daysOptions
-              : [7],
-          chatId: challenge.chatId || `chat_${challenge.id}`,
-        }));
+  id: challenge.id || "unknown",
+  title: challenge.title || "Sans titre",
+  category: challenge.category || null,
+  description: challenge.description || null,
+  imageUrl: challenge.imageUrl || null,
+  daysOptions: Array.isArray(challenge.daysOptions) && challenge.daysOptions.length > 0
+    ? challenge.daysOptions
+    : [7],
+  chatId: challenge.chatId || `chat_${challenge.id}`,
+  creatorId: challenge.creatorId || null, // ← AJOUTE
+}));
         console.log("Chargement initial des défis :", validChallenges);
         setSavedChallenges(validChallenges);
         setIsInitialized(true);
@@ -261,6 +260,7 @@ export const SavedChallengesProvider: React.FC<{
             ? challenge.daysOptions
             : [7],
         chatId: challenge.chatId || `chat_${challenge.id}`,
+        creatorId: challenge.creatorId ?? null,
       };
       // 🔒 MàJ locale optimiste + dédup + typage strict
  let nextLen = 0;

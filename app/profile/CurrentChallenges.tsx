@@ -48,6 +48,7 @@ import { useAdsVisibility } from "../../src/context/AdsVisibilityContext";
 import * as Haptics from "expo-haptics";
 import { Audio } from "expo-av";
 import { Image as ExpoImage } from "expo-image";
+import { translateChallenge } from "../../services/translationService";
 
 const SPACING = 18;
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
@@ -105,6 +106,7 @@ interface Challenge {
   duoPartnerId?: string;
   duoPartnerUsername?: string;
   uniqueKey?: string;
+  creatorId?: string | null;
 }
 
 export default function CurrentChallenges() {
@@ -126,6 +128,8 @@ export default function CurrentChallenges() {
   const tabBarHeight = useTabBarHeightSafe();
   const [adHeight, setAdHeight] = useState(0);
 
+
+  
   // ✅ FIX iOS — swipe → tap non intentionnel
   // Quand le Swipeable s'ouvre/ferme, on bloque onPress pendant 350ms
   // pour éviter que le relâchement du doigt soit capturé comme un tap.
@@ -154,6 +158,32 @@ export default function CurrentChallenges() {
   const gainDingRef = useRef<Audio.Sound | null>(null);
   const gainSparkleRef = useRef<Audio.Sound | null>(null);
   const isPlayingFxRef = useRef(false);
+
+  const [userChallengeTranslations, setUserChallengeTranslations] = useState<Record<string, { title?: string; description?: string }>>({});
+const translatingRef = useRef<Set<string>>(new Set());
+
+useEffect(() => {
+  const userCreated = currentChallenges.filter((c: any) => !!c.creatorId);
+  console.log("[translate] userCreated count:", userCreated.length);
+  if (!userCreated.length) return;
+  const lang = i18n.language;
+  userCreated.forEach(async (c: any) => {
+    const key = `${c.id}:${lang}`;
+    console.log("[translate] trying key:", key, "creatorId:", c.creatorId);
+    if (translatingRef.current.has(key)) {
+      console.log("[translate] already in flight:", key);
+      return;
+    }
+    translatingRef.current.add(key);
+    const result = await translateChallenge(c.id, lang);
+    console.log("[translate] result for", key, ":", JSON.stringify(result));
+    if (!result) { translatingRef.current.delete(key); return; }
+    setUserChallengeTranslations(prev => ({
+      ...prev,
+      [key]: { title: result.title, description: result.description },
+    }));
+  });
+}, [currentChallenges, i18n.language]);
 
   useEffect(() => {
     let mounted = true;
@@ -264,21 +294,29 @@ export default function CurrentChallenges() {
         ])
       ).values()
     ) as Challenge[];
-    return uniqueChallenges.map((item) => ({
-      ...item,
-      title: item.chatId
-        ? t(`challenges.${item.chatId}.title`, { defaultValue: item.title })
-        : item.title,
-      description: item.chatId
-        ? t(`challenges.${item.chatId}.description`, {
-            defaultValue: item.description || "",
-          })
-        : item.description || "",
-      category: item.category
-        ? t(`categories.${item.category}`, { defaultValue: item.category })
-        : t("miscellaneous"),
-    }));
-  }, [currentChallenges, i18n.language, t]);
+    return uniqueChallenges.map((item) => {
+  const isUserCreated = !!(item as any).creatorId;
+  const tKey = `${item.id}:${i18n.language}`;
+  const trans = isUserCreated ? userChallengeTranslations[tKey] : null;
+
+  return {
+    ...item,
+    title: isUserCreated
+      ? (trans?.title || item.title)
+      : (item.chatId
+          ? t(`challenges.${item.chatId}.title`, { defaultValue: item.title })
+          : item.title),
+    description: isUserCreated
+      ? (trans?.description || item.description || "")
+      : (item.chatId
+          ? t(`challenges.${item.chatId}.description`, { defaultValue: item.description || "" })
+          : item.description || ""),
+    category: item.category
+      ? t(`categories.${item.category}`, { defaultValue: item.category })
+      : t("miscellaneous"),
+  };
+});
+  }, [currentChallenges, i18n.language, t, userChallengeTranslations]);
 
   useEffect(() => {
   setLocalChallenges((prev) => {
