@@ -803,7 +803,27 @@
       "cancelError": "Annuleren is momenteel niet mogelijk."
     },
     "you": "Jij",
-    "partner": "Partner",
+    "partner": "Jouw vriend",
+    "onboarding": {
+      "slide1": {
+        "title": "Alleen ga je sneller.\nSamen ga je verder.",
+        "desc": "ChallengeTies verbindt je met iemand die er echt toe doet. Jullie voortgang, voor beiden zichtbaar."
+      },
+      "slide2": {
+        "statLabel": "grotere kans om 30 dagen vol te houden met een partner",
+        "withFriend": "Met een vriend",
+        "alone": "Alleen",
+        "desc": "Jouw partner ziet je vorderen. Jij ziet hem. Deze eenvoudige zichtbaarheid verandert alles."
+      },
+      "slide3": {
+        "title": "Klaar om als Duo te starten?",
+        "desc": "Kies hoe je jouw partner wilt vinden.",
+        "ctaInvite": "Een vriend uitnodigen",
+        "ctaInviteSub": "Stuur een link naar iemand die je kent",
+        "ctaMatch": "Een partner vinden",
+        "ctaMatchSub": "Match met een gebruiker die dezelfde uitdaging doet"
+      }
+    },
     "status": {
       "leading": "Je staat {{percent}}% voor",
       "behind": "Je staat {{percent}}% achter",
@@ -1349,6 +1369,9 @@
   "profileS": {
     "bioLabel": "Bio",
     "locationLabel": "Locatie",
+    "statTrophies": "trofeeën",
+"statStreak": "beste reeks",
+"statCompleted": "voltooid",
     "heroSub": "Alles wat je sterker maakt, op één plek.",
     "sectionsListA11y": "Profielinhoud en sectielijst",
     "noData": "Geen profielgegevens beschikbaar.",
@@ -2989,6 +3012,8 @@
     "close": "Sluiten",
     "notLoggedIn": "Je moet ingelogd zijn.",
     "keep": "Behouden",
+    "skip": "Overslaan",
+    "next": "Volgende",
     "sending": "Bezig met verzenden…",
     "cancel": "Annuleren",
     "edit": "Bewerken",

@@ -2,7 +2,7 @@
 // TOP 1 MONDIAL — ring SVG natif Android + navigation fonctionnelle + UI clean
 // FIX: auto-open modal bloqué si welcomeBonus encore visible
 
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   View, Text, StyleSheet, Pressable, TouchableOpacity,
   Modal, Dimensions, Platform,
@@ -197,6 +197,40 @@ const QuestRow = React.memo(function QuestRow({
   );
 });
 
+// ── StreakProgressFill — animé Reanimated ─────────────────────────────────
+const StreakProgressFill = React.memo(function StreakProgressFill({
+  pct, completed,
+}: { pct: number; completed: boolean }) {
+  const width = useSharedValue(0);
+  
+  // ✅ Précalculé hors worklet
+  const borderRadiusValue = ns(999);
+
+  useEffect(() => {
+    width.value = withTiming(Math.min(Math.max(pct, 0), 1), {
+      duration: 800,
+      easing: Easing.out(Easing.cubic),
+    });
+  }, [pct]);
+
+  const style = useAnimatedStyle(() => ({
+    width: `${width.value * 100}%` as any,
+    height: "100%",
+    borderRadius: borderRadiusValue, // ✅ valeur JS simple, pas un appel de fonction
+  }));
+
+  return (
+    <Animated.View style={style}>
+      <LinearGradient
+        colors={completed ? ["#22C55E", "#16A34A"] : ["#F97316", "#FFD166"]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+        style={{ flex: 1, borderRadius: borderRadiusValue }}
+      />
+    </Animated.View>
+  );
+});
+
 // ─── StreakQuestRow ───────────────────────────────────────────────────────────
 const StreakQuestRow = React.memo(function StreakQuestRow({
   titleKey, trophies, icon, completed, isDark, streakCurrent,
@@ -230,22 +264,34 @@ const StreakQuestRow = React.memo(function StreakQuestRow({
         <Text style={[qS.title, { color: completed ? subCol : textCol }]} numberOfLines={1}>
           {title}
         </Text>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: ns(5), marginTop: ns(4) }}>
-          {[0, 1, 2].map((i) => (
-            <View
-              key={i}
-              style={{
-                width: ns(8), height: ns(8), borderRadius: ns(4),
-                backgroundColor: i < current ? dotFill : (isDark ? "rgba(255,255,255,0.14)" : "rgba(0,0,0,0.10)"),
-                borderWidth: i < current ? 0 : 1,
-                borderColor: isDark ? "rgba(255,255,255,0.18)" : "rgba(0,0,0,0.12)",
-              }}
-            />
-          ))}
-          <Text style={{ fontFamily: "Comfortaa_700Bold", fontSize: ns(9), color: subCol }}>
-            {current}/3
-          </Text>
-        </View>
+        <View style={{ marginTop: ns(5) }}>
+  <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: ns(4) }}>
+    <Text style={{ fontFamily: "Comfortaa_700Bold", fontSize: ns(10), color: completed ? subCol : (isDark ? "rgba(255,255,255,0.72)" : "rgba(0,0,0,0.62)") }}>
+      {current}/3 {t("onboarding.streak.days", { defaultValue: "jours" })}
+    </Text>
+    <Text style={{ fontFamily: "Comfortaa_400Regular", fontSize: ns(9), color: subCol }}>
+      {completed
+        ? "✓"
+        : current === 0
+          ? t("onboarding.streak.start", { defaultValue: "Lance-toi !" })
+          : current === 1
+            ? t("onboarding.streak.oneMore", { defaultValue: "Continue !" })
+            : t("onboarding.streak.almostThere", { defaultValue: "Encore 1 jour !" })}
+    </Text>
+  </View>
+
+  {/* Track */}
+  <View style={{
+    height: ns(6),
+    borderRadius: ns(999),
+    backgroundColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.07)",
+    overflow: "hidden",
+    width: "88%",
+  }}>
+    {/* Fill animé */}
+    <StreakProgressFill pct={current / 3} completed={completed} />
+  </View>
+</View>
       </View>
       <View style={qS.right}>
         <Text style={[qS.trophies, { color: completed ? subCol : GOLD }]}>+{trophies}🏆</Text>
@@ -503,38 +549,39 @@ const mS = StyleSheet.create({
 export default function OnboardingQuestBanner({
   onQuestPress,
   streakCurrent = 0,
-  // FIX: prop pour bloquer l'auto-open pendant le WelcomeBonusModal
   welcomeVisible = false,
+  onDuoOnboarding,
 }: {
   onQuestPress: (questId: QuestId) => void;
   streakCurrent?: number;
   welcomeVisible?: boolean;
+  onDuoOnboarding?: () => void; // ✅ nouveau
 }) {
   const { t } = useTranslation();
   const { theme } = useTheme();
   const isDark = theme === "dark";
   const { visible, state, completedCount, totalCount, progressPct, complete } = useOnboardingQuests();
   const [modalVisible, setModalVisible] = useState(false);
+const modalCheckDoneRef = useRef(false);
  const [bannerExpanded, setBannerExpanded] = useState(false);
 
 useEffect(() => {
+  // ✅ On ne check qu'UNE SEULE FOIS par montage de composant
+  if (modalCheckDoneRef.current) return;
   if (!visible) return;
   if (welcomeVisible) return;
 
-  let cancelled = false;
+  modalCheckDoneRef.current = true;
+
   isOnboardingModalSeen().then((seen) => {
-    if (!seen && !cancelled) {
+    if (!seen) {
       const timer = setTimeout(() => {
-        if (!cancelled) {
-          setModalVisible(true);
-          markOnboardingModalSeen().catch(() => {});
-        }
+        setModalVisible(true);
+        markOnboardingModalSeen().catch(() => {});
       }, 1200);
-      return () => clearTimeout(timer);
+      // cleanup pas nécessaire ici car modalCheckDoneRef empêche le re-run
     }
   }).catch(() => {});
-
-  return () => { cancelled = true; };
 }, [visible, welcomeVisible]);
 
 const toggleBanner = useCallback(() => {
@@ -715,14 +762,20 @@ useEffect(() => {
 
           <View style={{ paddingHorizontal: ns(12), paddingBottom: ns(14), gap: ns(7) }}>
   {sortedQuests.map((q) =>
-    renderQuest(
-      q,
-      isDark,
-      () => onQuestPress(q.id),
-      state.exploreCount,
-      streakCurrent
-    )
-  )}
+  renderQuest(
+    q,
+    isDark,
+    () => {
+      if (q.id === "invite_duo" && onDuoOnboarding) {
+        onDuoOnboarding();
+      } else {
+        onQuestPress(q.id);
+      }
+    },
+    state.exploreCount,
+    streakCurrent
+  )
+)}
 </View>
         </View>
       )}

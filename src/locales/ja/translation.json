@@ -798,7 +798,27 @@
       "cancelError": "現在キャンセルできません。"
     },
     "you": "あなた",
-    "partner": "パートナー",
+    "partner": "友達",
+    "onboarding": {
+      "slide1": {
+        "title": "一人では速く。\n二人ではより遠くへ。",
+        "desc": "ChallengeTiesは本当に大切な人とあなたをつなぎます。進捗は二人で共有。"
+      },
+      "slide2": {
+        "statLabel": "パートナーと30日続ける可能性が高まる",
+        "withFriend": "友達と",
+        "alone": "一人",
+        "desc": "パートナーはあなたの進歩を見ています。あなたも彼らを見ています。この単純な可視性がすべてを変えます。"
+      },
+      "slide3": {
+        "title": "デュオで始める準備はできていますか？",
+        "desc": "パートナーをどのように見つけたいか選んでください。",
+        "ctaInvite": "友達を招待する",
+        "ctaInviteSub": "知り合いにリンクを送る",
+        "ctaMatch": "パートナーを探す",
+        "ctaMatchSub": "同じチャレンジをしているユーザーとマッチング"
+      }
+    },
     "status": {
       "leading": "{{percent}}% リード中",
       "behind": "{{percent}}% 遅れています",
@@ -1317,6 +1337,9 @@
   "profileS": {
     "bioLabel": "自己紹介",
     "locationLabel": "所在地",
+    "statTrophies": "トロフィー",
+"statStreak": "ベストストリーク",
+"statCompleted": "完了",
     "heroSub": "強くなるためのすべてを、ひとつに。",
     "sectionsListA11y": "プロフィール内容とセクション一覧",
     "noData": "プロフィールデータがありません。",
@@ -2975,6 +2998,8 @@
     "close": "閉じる",
     "notLoggedIn": "ログインが必要です。",
      "keep": "保持する",
+     "skip": "スキップ",
+    "next": "次へ",
     "sending": "送信中…",
     "edit": "編集",
     "hide": "非表示",

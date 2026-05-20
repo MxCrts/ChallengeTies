@@ -52,9 +52,8 @@ export function computeWelcomeBonusState(
   userData: any | null | undefined
 ): WelcomeBonusState {
   const today = todayKeyUTC();
-  const u     = (userData as any) || {};
+  const u = (userData as any) || {};
 
-  // Supporte: nouveau (welcomeLoginBonus map), legacy (WelcomeLoginBonus map)
   const wbObj =
     (u.welcomeLoginBonus && typeof u.welcomeLoginBonus === "object"
       ? u.welcomeLoginBonus : null) ||
@@ -63,17 +62,39 @@ export function computeWelcomeBonusState(
 
   const wb = wbObj || {};
 
-  const completed     = wb.completed === true;
-  const currentDay    = normalizeDayIndex(wb.currentDay);
+  const completed = wb.completed === true;
+  const currentDay = normalizeDayIndex(wb.currentDay);
   const lastClaimDate = typeof wb.lastClaimDate === "string" ? wb.lastClaimDate : null;
 
   if (completed) {
     return { currentDay, completed: true, canClaimToday: false, lastClaimDate };
   }
 
-  // ✅ J1 : jamais réclamé → on attend le J2 (lastClaimDate null = premier login)
-  const isFirstEverLogin = lastClaimDate === null && currentDay === 0;
-  const canClaimToday = !isFirstEverLogin && lastClaimDate !== today;
+  // ✅ FIX : on se base sur createdAt pour savoir si c'est vraiment J1
+  // Si lastClaimDate === null (jamais réclamé), on vérifie la date de création
+  // du compte. Si c'est aujourd'hui = J1, on attend demain.
+  // Si c'est avant aujourd'hui = l'user est revenu sans avoir réclamé J1,
+  // on lui montre quand même (il a raté J1, on lui donne J1 maintenant).
+  if (lastClaimDate === null) {
+    const createdAt = u.createdAt?.toDate?.() ?? u.createdAt ?? null;
+    const createdKey = createdAt
+      ? (() => {
+          const d = new Date(createdAt);
+          const y = d.getUTCFullYear();
+          const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+          const day = String(d.getUTCDate()).padStart(2, "0");
+          return `${y}-${m}-${day}`;
+        })()
+      : null;
+
+    // Compte créé aujourd'hui = J1, pas encore dispo
+    const createdToday = createdKey === today;
+    const canClaimToday = !createdToday;
+    return { currentDay, completed: false, canClaimToday, lastClaimDate };
+  }
+
+  // A déjà réclamé au moins une fois : dispo si pas encore réclamé aujourd'hui
+  const canClaimToday = lastClaimDate !== today;
   return { currentDay, completed: false, canClaimToday, lastClaimDate };
 }
 

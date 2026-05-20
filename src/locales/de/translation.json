@@ -824,6 +824,8 @@
 "commonS": {
     "close": "Schließen",
     "edit": "Bearbeiten",
+    "skip": "Überspringen",
+    "next": "Weiter",
     "hide": "Ausblenden",
     "keep": "Behalten",
     "notLoggedIn": "Du musst angemeldet sein.",
@@ -834,6 +836,9 @@
   },
 "profileS": {
     "bioLabel": "Bio",
+    "statTrophies": "Trophäen",
+"statStreak": "Beste Serie",
+"statCompleted": "abgeschlossen",
     "locationLabel": "Standort",
     "interestsLabel": "Interessen",
     "heroSub": "Alles, was dich stärker macht – an einem Ort.",
@@ -2907,7 +2912,27 @@
       "cancelError": "Abbruch momentan nicht möglich."
     },
     "you": "Du",
-    "partner": "Partner",
+    "partner": "Dein Freund",
+    "onboarding": {
+      "slide1": {
+        "title": "Allein geht's schneller.\nGemeinsam weiter.",
+        "desc": "ChallengeTies verbindet dich mit jemandem, der wirklich zählt. Euer Fortschritt, für beide sichtbar."
+      },
+      "slide2": {
+        "statLabel": "höhere Chance, 30 Tage zu halten – zu zweit",
+        "withFriend": "Mit einem Freund",
+        "alone": "Alleine",
+        "desc": "Dein Partner sieht, wie du vorankommst. Du siehst ihn. Diese einfache Sichtbarkeit verändert alles."
+      },
+      "slide3": {
+        "title": "Bereit, als Duo zu starten?",
+        "desc": "Wähle, wie du deinen Partner finden möchtest.",
+        "ctaInvite": "Einen Freund einladen",
+        "ctaInviteSub": "Sende einen Link an jemanden, den du kennst",
+        "ctaMatch": "Einen Partner finden",
+        "ctaMatchSub": "Finde jemanden, der dieselbe Challenge macht"
+      }
+    },
     "status": {
       "leading": "Du führst mit {{percent}}%",
       "behind": "Du liegst {{percent}}% zurück",

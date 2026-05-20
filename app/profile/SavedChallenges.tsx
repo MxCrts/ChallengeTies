@@ -15,6 +15,7 @@ import {
   Dimensions,
   SafeAreaView,
   StatusBar,
+  Pressable,
   Platform,
   AccessibilityInfo,
   I18nManager,
@@ -23,6 +24,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import Swipeable from "react-native-gesture-handler/Swipeable";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import Svg, { Circle, Path } from "react-native-svg";
 import Animated, {
   FadeInUp,
   FadeOutRight,
@@ -375,6 +377,17 @@ const ringGrad = isDarkMode
                 accessibilityRole="button"
                 testID={`challenge-card-${item.id}`}
               >
+
+                {/* ✅ Android fake shadow */}
+  {Platform.OS === "android" && (
+    <View style={{
+      position: "absolute",
+      bottom: -3, left: 6, right: 6,
+      height: "100%",
+      borderRadius: normalizeSize(26),
+      backgroundColor: withAlpha("#F97316", 0.10),
+    }} pointerEvents="none" />
+  )}
                 {/* Glow subtil top */}
                 {/* ✅ Ring gradient premium */}
 <LinearGradient
@@ -565,41 +578,69 @@ const ringGrad = isDarkMode
   );
 
   const renderEmptyState = useCallback(
-    () => (
-      <Animated.View
-        entering={FadeInUp.delay(100)}
-        style={styles.noChallengesContent}
-      >
-        <Ionicons
-          name="bookmark-outline"
-          size={normalizeSize(60)}
-          color={currentTheme.colors.textSecondary}
-          accessibilityLabel={t("noSavedChallengesIcon")}
+  () => (
+    <Animated.View entering={FadeInUp.delay(100)} style={styles.noChallengesContent}>
+
+      {/* Illustration SVG */}
+      <View style={{ width: normalizeSize(120), height: normalizeSize(120), marginBottom: normalizeSize(24), alignItems: "center", justifyContent: "center" }}>
+        <LinearGradient
+          colors={[withAlpha(currentTheme.colors.primary, 0.15), withAlpha(currentTheme.colors.primary, 0.05)]}
+          style={{ position: "absolute", width: normalizeSize(120), height: normalizeSize(120), borderRadius: normalizeSize(60) }}
         />
-        <Text
-          style={[
-            styles.noChallengesText,
-            {
-              color: isDarkMode
-                ? currentTheme.colors.textPrimary
-                : currentTheme.colors.textSecondary,
-            },
-          ]}
+        <Svg width={normalizeSize(72)} height={normalizeSize(72)} viewBox="0 0 72 72" fill="none">
+          {/* Cercle fond */}
+          <Circle cx="36" cy="36" r="34" stroke={withAlpha(currentTheme.colors.primary, 0.25)} strokeWidth="1.5" strokeDasharray="4 3" />
+          {/* Bookmark stylisé */}
+          <Path d="M24 18H48C49.1 18 50 18.9 50 20V56L36 46L22 56V20C22 18.9 22.9 18 24 18Z"
+            fill={withAlpha(currentTheme.colors.primary, isDarkMode ? 0.20 : 0.12)}
+            stroke={currentTheme.colors.primary} strokeWidth="1.5" strokeLinejoin="round"
+          />
+          {/* Étoile inside */}
+          <Path d="M36 26L38.5 31.5H44.5L39.5 35L41.5 41L36 37.5L30.5 41L32.5 35L27.5 31.5H33.5Z"
+            fill={currentTheme.colors.primary} opacity="0.90"
+          />
+        </Svg>
+      </View>
+
+      <Text style={[styles.noChallengesText, {
+        color: isDarkMode ? currentTheme.colors.textPrimary : "#1A0800",
+        fontSize: normalizeSize(22),
+        marginBottom: normalizeSize(8),
+      }]}>
+        {t("emptyState.saved.title", { defaultValue: "Rien de sauvegardé." })}
+      </Text>
+
+      <Text style={[styles.noChallengesSubtext, { color: currentTheme.colors.textSecondary, textAlign: "center" }]}>
+        {t("emptyState.saved.sub", { defaultValue: "Explore les défis et marque\nceux qui t'inspirent." })}
+      </Text>
+
+      {/* CTA */}
+      <Pressable
+        onPress={() => router.push("/explore")}
+        style={({ pressed }) => ({
+          marginTop: normalizeSize(24),
+          borderRadius: normalizeSize(999),
+          overflow: "hidden",
+          opacity: pressed ? 0.88 : 1,
+          transform: [{ scale: pressed ? 0.97 : 1 }],
+        })}
+      >
+        <LinearGradient
+          colors={[currentTheme.colors.primary, currentTheme.colors.secondary]}
+          start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+          style={{ paddingVertical: normalizeSize(13), paddingHorizontal: normalizeSize(28), flexDirection: "row", alignItems: "center", gap: normalizeSize(8) }}
         >
-          {t("noSavedChallenges")}
-        </Text>
-        <Text
-          style={[
-            styles.noChallengesSubtext,
-            { color: currentTheme.colors.textSecondary },
-          ]}
-        >
-          {t("saveChallengesHere")}
-        </Text>
-      </Animated.View>
-    ),
-    [currentTheme, t, isDarkMode]
-  );
+          <Ionicons name="compass-outline" size={normalizeSize(18)} color="#0B1120" />
+          <Text style={{ fontFamily: "Comfortaa_700Bold", fontSize: normalizeSize(14), color: "#0B1120" }}>
+            {t("emptyState.saved.cta", { defaultValue: "Explorer les défis" })}
+          </Text>
+        </LinearGradient>
+      </Pressable>
+
+    </Animated.View>
+  ),
+  [currentTheme, t, isDarkMode, router]
+);
 
   if (isLoading) {
     return (
@@ -809,12 +850,11 @@ card: {
   borderRadius: normalizeSize(24),
   borderWidth: StyleSheet.hairlineWidth,
   overflow: "hidden",
-
   shadowColor: "#000",
   shadowOffset: { width: 0, height: 10 },
   shadowOpacity: Platform.OS === "ios" ? 0.10 : 0,
   shadowRadius: 18,
-  elevation: Platform.OS === "android" ? 2 : 0,
+  elevation: Platform.OS === "android" ? 6 : 0,
 },
 
 cardSheen: {
@@ -868,13 +908,13 @@ cardSheen: {
     backgroundColor: "rgba(255,255,255,0.12)",
   },
   cardImage: {
-    width: normalizeSize(66),
     aspectRatio: 1,
     borderRadius: normalizeSize(16),
     marginRight: SPACING * 0.95,
     borderWidth: StyleSheet.hairlineWidth,
 borderColor: "rgba(255,255,255,0.20)",
 backgroundColor: "rgba(255,255,255,0.06)",
+width: normalizeSize(80),
 
   },
   cardContent: {

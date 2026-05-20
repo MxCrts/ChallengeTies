@@ -718,6 +718,8 @@
     "close": "关闭",
     "notLoggedIn": "你必须先登录。",
      "keep": "保留",
+     "skip": "跳过",
+    "next": "下一步",
     "errorTitle": "错误",
     "sending": "发送中…",
     "edit": "编辑",
@@ -728,6 +730,9 @@
 "profileS": {
     "bioLabel": "个人简介",
     "locationLabel": "位置",
+    "statTrophies": "奖杯",
+"statStreak": "最佳连续",
+"statCompleted": "已完成",
     "heroSub": "让你更强的一切，都在这里。",
     "sectionsListA11y": "个人资料内容与分区列表",
     "noData": "暂无个人资料数据。",
@@ -5152,8 +5157,28 @@
       "cancelInvite": "取消",
       "cancelError": "暂时无法取消。"
     },
-    "you": "你",
-    "partner": "伙伴",
+     "you": "你",
+    "partner": "你的朋友",
+    "onboarding": {
+      "slide1": {
+        "title": "一个人走得快，\n两个人走得远。",
+        "desc": "ChallengeTies 将你与真正重要的人连接。你们的进度，彼此可见。"
+      },
+      "slide2": {
+        "statLabel": "与伙伴坚持30天的可能性更高",
+        "withFriend": "与朋友",
+        "alone": "独自",
+        "desc": "你的伙伴看到你进步。你看到他。这种简单的可见性改变了一切。"
+      },
+      "slide3": {
+        "title": "准备好以双人模式开始了吗？",
+        "desc": "选择你想如何找到你的伙伴。",
+        "ctaInvite": "邀请朋友",
+        "ctaInviteSub": "发送链接给你认识的人",
+        "ctaMatch": "寻找伙伴",
+        "ctaMatchSub": "与做相同挑战的用户匹配"
+      }
+    },
     "status": {
       "leading": "你领先 {{percent}}%",
       "behind": "你落后 {{percent}}%",

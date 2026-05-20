@@ -43,6 +43,7 @@ import designSystem, { Theme } from "@/theme/designSystem";
 import * as Haptics from "expo-haptics";
 import { logEvent } from "@/src/analytics";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { translateChallenge } from "../services/translationService";
 
 // ─── How long we wait before forcing signalModalVisible on iOS ────────────────
 // iOS can silently delay onShow up to ~800ms on cold-start
@@ -356,33 +357,48 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
         }
 
         // 3) Challenge title
-        try {
-          const chSnap = await getDoc(doc(db, "challenges", chId));
-          if (!mountedRef.current || lastLoadKeyRef.current !== loadKey) return;
-          if (chSnap.exists()) {
-            const ch = chSnap.data() as any;
-            const chatIdFromDoc = ch?.chatId || ch?.id || chId || "";
-            setChallengeChatId(chatIdFromDoc);
-            const i18nTitle = t(`challenges.${chatIdFromDoc}.title`, {
-              defaultValue: ch?.title || "",
-            });
-            setChallengeTitle(i18nTitle || ch?.title || "");
-          } else {
-            setChallengeChatId(chId);
-            const i18nTitle = t(`challenges.${chId}.title`, {
-              defaultValue: "",
-            });
-            setChallengeTitle(i18nTitle || "");
-          }
-        } catch {
-          if (mountedRef.current && lastLoadKeyRef.current === loadKey) {
-            setChallengeChatId(chId);
-            const i18nTitle = t(`challenges.${chId}.title`, {
-              defaultValue: "",
-            });
-            setChallengeTitle(i18nTitle || "");
-          }
-        }
+try {
+  const chSnap = await getDoc(doc(db, "challenges", chId));
+  if (!mountedRef.current || lastLoadKeyRef.current !== loadKey) return;
+  if (chSnap.exists()) {
+    const ch = chSnap.data() as any;
+    const chatIdFromDoc = ch?.chatId || ch?.id || chId || "";
+    setChallengeChatId(chatIdFromDoc);
+
+    // ✅ User-created challenge (pas de chatId) → traduction lazy
+    if (ch?.creatorId && !ch?.chatId) {
+      const rawTitle = ch?.title || "";
+      setChallengeTitle(rawTitle); // fallback immédiat
+      try {
+        translateChallenge(chId, i18n.language);
+        const result = await translateChallenge(chId, i18n.language);
+        if (!mountedRef.current || lastLoadKeyRef.current !== loadKey) return;
+        setChallengeTitle(result?.title || rawTitle);
+      } catch {
+        // garde le rawTitle déjà set
+      }
+    } else {
+      const i18nTitle = t(`challenges.${chatIdFromDoc}.title`, {
+        defaultValue: ch?.title || "",
+      });
+      setChallengeTitle(i18nTitle || ch?.title || "");
+    }
+  } else {
+    setChallengeChatId(chId);
+    const i18nTitle = t(`challenges.${chId}.title`, {
+      defaultValue: "",
+    });
+    setChallengeTitle(i18nTitle || "");
+  }
+} catch {
+  if (mountedRef.current && lastLoadKeyRef.current === loadKey) {
+    setChallengeChatId(chId);
+    const i18nTitle = t(`challenges.${chId}.title`, {
+      defaultValue: "",
+    });
+    setChallengeTitle(i18nTitle || "");
+  }
+}
 
         try {
           await logEvent("invite_modal_shown", {

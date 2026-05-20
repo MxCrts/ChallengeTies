@@ -117,6 +117,8 @@ import ChoixDuoModal from "../../components/ChoixDuoModal";
 import { QUEST_DAILY_BONUS_CLAIMED, QUEST_INVITATION_SENT, QUEST_CHALLENGE_EXPLORED } from "@/src/hooks/useOnboardingQuests";
 import { usePartnerDuoHome } from "@/src/hooks/usePartnerDuoHome";
 import { translateChallenge } from "../../services/translationService";
+import DuoOnboardingModal, { isDuoOnboardingSeen } from "@/components/DuoOnboardingModal";
+
 
 const getScreen = () => Dimensions.get("window");
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = getScreen();
@@ -511,6 +513,7 @@ const discoverYRef = useRef(0);
 // --- Guided tour ---
 const [firstMarkModalVisible, setFirstMarkModalVisible] = useState(false);
 const [choixDuoModalVisible, setChoixDuoModalVisible] = useState(false);
+const [duoOnboardingVisible, setDuoOnboardingVisible] = useState(false);
 
 
 useEffect(() => {
@@ -2310,7 +2313,7 @@ const firstDayBannerStyle = useAnimatedStyle(() => ({
   transform: [{ translateY: firstDayAnimTranslateY.value }],
 }));
 
-const handleQuestPress = useCallback((questId: QuestId) => {
+const handleQuestPress = useCallback(async (questId: QuestId) => {
   switch (questId) {
     case "mark_first_day": {
       const targetId = primaryActiveId ?? activeChallengeId;
@@ -2331,17 +2334,24 @@ const handleQuestPress = useCallback((questId: QuestId) => {
       router.push("/profile/UserInfo" as any);
       break;
     case "invite_duo": {
-      const targetId =
-        pendingInvite?.challengeId ??
-        todayHubView.hubChallengeId ??
-        primaryActiveId ??
-        activeChallengeId;
-      if (targetId) {
-        router.push(`/challenge-details/${targetId}?openChoixDuo=1` as any);
-      } else {
-        router.push("/explore" as any);
-      }
-      break;
+  // ✅ Check onboarding duo — une seule fois
+  const seen = await isDuoOnboardingSeen();
+  if (!seen) {
+    setDuoOnboardingVisible(true);
+    return;
+  }
+  // Flow normal
+  const targetId =
+    pendingInvite?.challengeId ??
+    todayHubView.hubChallengeId ??
+    primaryActiveId ??
+    activeChallengeId;
+  if (targetId) {
+    router.push(`/challenge-details/${targetId}?openChoixDuo=1` as any);
+  } else {
+    router.push("/explore" as any);
+  }
+  break;
     }
     case "maintain_3day_streak":
       // Quête auto — pas d'action manuelle
@@ -3192,6 +3202,7 @@ setPostWelcomeAbsorbArmed(true);
                           {heroCtaLabel}
                         </Text>
                       </View>
+
                     </LinearGradient>
                   </Animated.View>
                 </View>
@@ -3454,10 +3465,11 @@ setPostWelcomeAbsorbArmed(true);
         
   <View style={{ zIndex: 1, elevation: 1 }} pointerEvents="box-none">
     <OnboardingQuestBanner
-   onQuestPress={handleQuestPress}
-   streakCurrent={streakCurrent}
-   welcomeVisible={welcomeVisible}
- />
+  onQuestPress={handleQuestPress}
+  streakCurrent={streakCurrent}
+  welcomeVisible={welcomeVisible}
+  onDuoOnboarding={() => setDuoOnboardingVisible(true)}
+/>
   </View>
 
        {/* ════ QUICK ACTIONS ════ */}
@@ -4435,6 +4447,40 @@ setPostWelcomeAbsorbArmed(true);
     }, 280);
   }}
   challengeTitle={effectiveActiveMeta?.title}
+/>
+<DuoOnboardingModal
+  visible={duoOnboardingVisible}
+  onClose={() => setDuoOnboardingVisible(false)}
+  onInviteFriend={() => {
+    setDuoOnboardingVisible(false);
+    setTimeout(() => {
+      const targetId =
+        pendingInvite?.challengeId ??
+        todayHubView.hubChallengeId ??
+        primaryActiveId ??
+        activeChallengeId;
+      if (targetId) {
+        safeNavigate(`/challenge-details/${targetId}?openChoixDuo=1`, "duo-onboarding-invite");
+      } else {
+        safeNavigate("/explore", "duo-onboarding-no-challenge");
+      }
+    }, 320);
+  }}
+  onFindPartner={() => {
+    setDuoOnboardingVisible(false);
+    setTimeout(() => {
+      const targetId =
+        pendingInvite?.challengeId ??
+        todayHubView.hubChallengeId ??
+        primaryActiveId ??
+        activeChallengeId;
+      if (targetId) {
+        safeNavigate(`/challenge-details/${targetId}?openChoixDuo=1`, "duo-onboarding-match");
+      } else {
+        safeNavigate("/explore", "duo-onboarding-no-challenge");
+      }
+    }, 320);
+  }}
 />
       </LinearGradient>
     </SafeAreaView>

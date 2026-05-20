@@ -796,8 +796,28 @@
     "cancelConfirmBody": "친구는 해당 링크로 이 듀오에 더 이상 참여할 수 없습니다.",
       "cancelError": "지금은 취소할 수 없습니다."
     },
-    "you": "나",
-    "partner": "파트너",
+    "you": "너",
+    "partner": "친구",
+    "onboarding": {
+      "slide1": {
+        "title": "혼자 가면 빠르고\n함께 가면 더 멀리.",
+        "desc": "ChallengeTies는 당신에게 정말 중요한 사람과 연결합니다. 진행 상황을 함께 확인하세요."
+      },
+      "slide2": {
+        "statLabel": "파트너와 함께 30일 달성 가능성 증가",
+        "withFriend": "친구와 함께",
+        "alone": "혼자",
+        "desc": "파트너가 당신의 진행 상황을 봅니다. 당신도 그를 봅니다. 이 단순한 가시성이 모든 것을 바꿉니다."
+      },
+      "slide3": {
+        "title": "듀오로 시작할 준비가 됐나요?",
+        "desc": "파트너를 어떻게 찾을지 선택하세요.",
+        "ctaInvite": "친구 초대하기",
+        "ctaInviteSub": "아는 사람에게 링크를 보내세요",
+        "ctaMatch": "파트너 찾기",
+        "ctaMatchSub": "같은 챌린지를 하는 사용자와 매칭"
+      }
+    },
     "status": {
       "leading": "{{percent}}% 앞서고 있음",
       "behind": "{{percent}}% 뒤처짐",
@@ -1306,6 +1326,9 @@
     "bioLabel": "소개",
     "heroSub": "너를 더 강하게 만드는 모든 것, 한곳에.",
     "sectionsListA11y": "프로필 내용 및 섹션 목록",
+    "statTrophies": "트로피",
+"statStreak": "최고 연속",
+"statCompleted": "완료",
     "noData": "프로필 데이터가 없습니다.",
     "locationLabel": "지역",
     "interestsLabel": "관심사",
@@ -2898,6 +2921,8 @@
     "close": "닫기",
     "notLoggedIn": "로그인이 필요합니다.",
     "keep": "유지" ,
+    "skip": "건너뛰기",
+    "next": "다음",
     "sending": "전송 중…",
     "cancel": "취소",
     "edit": "편집",

@@ -54,6 +54,8 @@ export type OnboardingState = {
 // 4 - complete_profile  → engagement identitaire
 // 5 - maintain_3day_streak → long terme, auto-trigger
 
+let _modalSeenMemoryCache: boolean | null = null;
+
 export const QUEST_DEFINITIONS: QuestDef[] = [
   {
     id: "mark_first_day",
@@ -118,17 +120,27 @@ export const TOTAL_TROPHIES = QUEST_DEFINITIONS.reduce(
 ); // = 180
 
 export async function isOnboardingModalSeen(): Promise<boolean> {
+  // ✅ Cache mémoire — évite le race condition async/remontage
+  if (_modalSeenMemoryCache === true) return true;
   try {
     const v = await AsyncStorage.getItem(KEY_MODAL_SEEN);
-    return v === "1";
+    const seen = v === "1";
+    if (seen) _modalSeenMemoryCache = true;
+    return seen;
   } catch {
     return false;
   }
 }
 
 export async function markOnboardingModalSeen(): Promise<void> {
+  // ✅ Set en mémoire IMMÉDIATEMENT — avant tout await
+  _modalSeenMemoryCache = true;
+  
   try {
     await AsyncStorage.setItem(KEY_MODAL_SEEN, "1");
+  } catch {}
+  
+  try {
     const uid = auth.currentUser?.uid;
     if (!uid) return;
     const { updateDoc } = await import("firebase/firestore");
@@ -293,6 +305,7 @@ export async function syncOnboardingFromFirestore(): Promise<void> {
     }
     const modalSeen = firestoreQuests["modalSeen"] === true;
 if (modalSeen) {
+  _modalSeenMemoryCache = true; // ✅ ajoute cette ligne
   await AsyncStorage.setItem(KEY_MODAL_SEEN, "1");
 }
   } catch (e) {

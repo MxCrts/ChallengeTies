@@ -596,6 +596,8 @@
     "close": "Close",
     "notLoggedIn": "You must be logged in.",
     "keep": "Keep",
+    "skip": "Skip",
+    "next": "Next",
     "errorTitle": "Error",
     "edit": "Edit",
     "hide": "Hide",
@@ -605,6 +607,9 @@
   },
 "profileS": {
     "bioLabel": "Bio",
+    "statTrophies": "trophies",
+"statStreak": "best streak",
+"statCompleted": "completed",
     "locationLabel": "Location",
     "heroSub": "Everything that makes you stronger, in one place.",
     "sectionsListA11y": "Profile content and section list",
@@ -4794,7 +4799,27 @@
       "cancelError": "Unable to cancel right now."
     },
     "you": "You",
-    "partner": "Partner",
+    "partner": "Your friend",
+    "onboarding": {
+      "slide1": {
+        "title": "Alone you go faster.\nTogether you go further.",
+        "desc": "ChallengeTies connects you with someone who truly matters. Your progress, visible to both."
+      },
+      "slide2": {
+        "statLabel": "more likely to stick to 30 days with a partner",
+        "withFriend": "With a friend",
+        "alone": "Alone",
+        "desc": "Your partner sees you progress. You see them. This simple visibility changes everything."
+      },
+      "slide3": {
+        "title": "Ready to start as a Duo?",
+        "desc": "Choose how you want to find your partner.",
+        "ctaInvite": "Invite a friend",
+        "ctaInviteSub": "Send a link to someone you know",
+        "ctaMatch": "Find a partner",
+        "ctaMatchSub": "Match with a user doing the same challenge"
+      }
+    },
     "status": {
       "leading": "You lead by {{percent}}%",
       "behind": "You are behind by {{percent}}%",

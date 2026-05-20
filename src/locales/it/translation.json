@@ -777,6 +777,8 @@
     "close": "Chiudi",
     "notLoggedIn": "Devi effettuare l’accesso.",
     "keep": "Mantieni",
+    "skip": "Salta",
+    "next": "Avanti",
     "errorTitle": "Errore",
     "sending": "Invio…",
     "cancel": "Annulla",
@@ -786,6 +788,9 @@
   },
 "profileS": {
     "bioLabel": "Bio",
+    "statTrophies": "trofei",
+"statStreak": "serie migliore",
+"statCompleted": "completati",
     "heroSub": "Tutto ciò che ti rende più forte, in un unico posto.",
     "sectionsListA11y": "Contenuti del profilo e elenco sezioni",
     "noData": "Nessun dato profilo disponibile.",
@@ -5143,7 +5148,27 @@
       "cancelError": "Impossibile annullare al momento."
     },
     "you": "Tu",
-    "partner": "Partner",
+    "partner": "Il tuo amico",
+    "onboarding": {
+      "slide1": {
+        "title": "Da solo vai più veloce.\nInsieme vai più lontano.",
+        "desc": "ChallengeTies ti connette con qualcuno che conta davvero. Il vostro progresso, visibile a entrambi."
+      },
+      "slide2": {
+        "statLabel": "più probabilità di resistere 30 giorni con un partner",
+        "withFriend": "Con un amico",
+        "alone": "Da solo",
+        "desc": "Il tuo partner ti vede progredire. Tu lo vedi. Questa semplice visibilità cambia tutto."
+      },
+      "slide3": {
+        "title": "Pronti a iniziare in Duo?",
+        "desc": "Scegli come vuoi trovare il tuo partner.",
+        "ctaInvite": "Invita un amico",
+        "ctaInviteSub": "Invia un link a qualcuno che conosci",
+        "ctaMatch": "Trova un partner",
+        "ctaMatchSub": "Abbinati a un utente che fa la stessa sfida"
+      }
+    },
     "status": {
       "leading": "Sei in vantaggio del {{percent}}%",
       "behind": "Sei indietro del {{percent}}%",

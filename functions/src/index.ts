@@ -1,6 +1,8 @@
 import express from "express";
 import { onRequest } from "firebase-functions/v2/https";
 import { initializeApp, getApps } from "firebase-admin/app";
+import * as functions from "firebase-functions";
+import * as https from "https";
 
 if (!getApps().length) initializeApp();
 
@@ -303,6 +305,43 @@ ${iosAppId ? `<meta property="al:ios:app_store_id" content="${iosAppId}">` : ""}
   res.set("Cache-Control", "public, max-age=0, s-maxage=600");
   res.status(200).send(head + body);
 });
+
+export const notifyNewChallengeReview = functions
+  .region("europe-west1")
+  .firestore
+  .document("challenges/{challengeId}")
+  .onCreate(async (snap, context) => {
+    const data = snap.data();
+    
+    // On notifie uniquement les challenges créés par des users (pas les tiens)
+    if (!data?.creatorId) return null;
+    
+    const payload = JSON.stringify({
+      challengeId: context.params.challengeId,
+      title: data?.title || "Sans titre",
+      creatorId: data?.creatorId,
+      category: data?.category || "Non défini",
+      description: data?.description || "",
+    });
+
+    const webhookUrl = "https://hook.eu1.make.com/brcniymsfhimbrpnq02yb4n8crjecrhp";
+    const url = new URL(webhookUrl);
+
+    return new Promise((resolve, reject) => {
+      const req = https.request({
+        hostname: url.hostname,
+        path: url.pathname,
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Content-Length": Buffer.byteLength(payload),
+        },
+      }, (res) => { resolve(res.statusCode); });
+      req.on("error", reject);
+      req.write(payload);
+      req.end();
+    });
+  });
 
 
 /** =========================

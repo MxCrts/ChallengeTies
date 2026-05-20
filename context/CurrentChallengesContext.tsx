@@ -1450,6 +1450,22 @@ defer(async () => {
          )
        );
      }
+     const SHARE_MILESTONES = [7, 14, 21, 30];
+const isHalfway = capturedSelectedDays > 0 && 
+  capturedCompletedDays === Math.floor(capturedSelectedDays / 2);
+const isMilestone = SHARE_MILESTONES.includes(capturedCompletedDays) || isHalfway;
+
+if (isMilestone && capturedUniqueKey) {
+  defer(() => {
+    DeviceEventEmitter.emit("challengeties.share.milestone", {
+      completedDays: capturedCompletedDays,
+      selectedDays: capturedSelectedDays,
+      uniqueKey: capturedUniqueKey,
+      challengeId: capturedChallengeId,
+    });
+  });
+}
+
      if (capturedUniqueKey && capturedCompletedDays > 0 && !needsComplete) {
        defer(async () => {
          try {

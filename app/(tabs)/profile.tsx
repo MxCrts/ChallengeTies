@@ -430,17 +430,6 @@ const rows = useMemo<ProfileSection[][]>(() => {
                     <PioneerBadge size="mini" label={t("badges.pioneer", { defaultValue: "Pioneer" })} style={s.pioneerBadge} />
                   )}
                 </View>
-
-                <Animated.View entering={ZoomIn.delay(200)} style={s.trophyChip}>
-                  <LinearGradient
-                    colors={isDarkMode ? [withAlpha(currentTheme.colors.background, 0.80), withAlpha(currentTheme.colors.cardBackground, 0.70)] : ["rgba(255,255,255,0.96)", "rgba(255,244,225,0.92)"]}
-                    start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-                    style={[s.trophyChipInner, { borderColor: withAlpha(currentTheme.colors.trophy, isDarkMode ? 0.30 : 0.40) }]}
-                  >
-                    <Ionicons name="trophy" size={n(14)} color={currentTheme.colors.trophy} />
-                    <Text style={[s.trophyText, { color: isDarkMode ? "#FFD36A" : "#8A4B00" }]}>{userData?.trophies ?? 0}</Text>
-                  </LinearGradient>
-                </Animated.View>
               </View>
 
               <Text style={[s.username, { color: textPrimary }]} numberOfLines={1} adjustsFontSizeToFit>
@@ -484,6 +473,74 @@ const rows = useMemo<ProfileSection[][]>(() => {
                   </Text>
                 </View>
               )}
+
+              {/* ── Stats identitaires inline ── */}
+{(() => {
+  const completedCount = Array.isArray((userData as any)?.CompletedChallenges)
+    ? (userData as any).CompletedChallenges.length
+    : 0;
+  const longestStreak = typeof (userData as any)?.longestStreak === "number"
+    ? (userData as any).longestStreak
+    : 0;
+  const trophyCount = userData?.trophies ?? 0;
+
+  if (completedCount === 0 && longestStreak === 0 && trophyCount === 0) return null;
+
+  return (
+    <View style={{
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: n(6),
+      marginTop: n(10),
+      marginBottom: n(2),
+      paddingHorizontal: n(8),
+    }}>
+      {[
+        { icon: "trophy" as const,           value: trophyCount,    label: t("profileS.statTrophies",  { defaultValue: "trophées" }) },
+        { icon: "flame" as const,            value: longestStreak,  label: t("profileS.statStreak",    { defaultValue: "j best" }) },
+        { icon: "checkmark-done" as const,   value: completedCount, label: t("profileS.statCompleted", { defaultValue: "terminés" }) },
+      ].map((stat, i) => (
+        <React.Fragment key={i}>
+          {i > 0 && (
+            <View style={{
+              width: 1,
+              height: n(28),
+              backgroundColor: isDarkMode
+                ? "rgba(255,255,255,0.10)"
+                : "rgba(0,0,0,0.08)",
+            }} />
+          )}
+          <View style={{ alignItems: "center", gap: n(2), minWidth: n(56) }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: n(4) }}>
+              <Ionicons
+                name={stat.icon}
+                size={n(13)}
+                color={primaryColor}
+              />
+              <Text style={{
+                fontFamily: "Comfortaa_700Bold",
+                fontSize: n(15),
+                color: textPrimary,
+                includeFontPadding: false,
+              }}>
+                {stat.value}
+              </Text>
+            </View>
+            <Text style={{
+              fontFamily: "Comfortaa_400Regular",
+              fontSize: n(10),
+              color: textSecondary,
+              includeFontPadding: false,
+            }}>
+              {stat.label}
+            </Text>
+          </View>
+        </React.Fragment>
+      ))}
+    </View>
+  );
+})()}
 
               {userData?.challengeCategories && userData.challengeCategories.filter(Boolean).length > 0 ? (
   <View style={s.interestsRow}>

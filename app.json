@@ -2,14 +2,9 @@
   "expo": {
     "name": "ChallengeTies",
     "slug": "ChallengeMe",
-    "version": "1.2.4",
+    "version": "1.2.5",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "splash": {
-      "image": "./assets/images/splash.png",
-      "resizeMode": "cover",
-      "backgroundColor": "#0B1120"
-    },
     "scheme": "myapp",
     "userInterfaceStyle": "automatic",
     "ios": {
@@ -139,13 +134,14 @@
         }
       ],
       [
-        "expo-splash-screen",
-        {
-          "image": "./assets/images/splash.png",
-          "resizeMode": "cover",
-          "backgroundColor": "#0B1120"
-        }
-      ],
+  "expo-splash-screen",
+  {
+    "image": "./assets/images/splash.png",
+    "resizeMode": "cover",
+    "backgroundColor": "#0B1120",
+    "imageWidth": 200
+  }
+],
       "expo-font",
       "expo-localization",
       [

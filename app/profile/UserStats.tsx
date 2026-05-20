@@ -282,8 +282,8 @@ export default function UserStats() {
     </SafeAreaView>
   );
 
-  const RING = ns(IS_COMPACT ? 104 : 114);
-  const SW = ns(9);
+  const RING = ns(IS_COMPACT ? 124 : 140);
+const SW = ns(11);
 
   // ── Grid items — 6 stats, sans doublons par rapport aux badges de la trophy card
   const gridItems = [
@@ -336,7 +336,7 @@ export default function UserStats() {
                 <View style={{ width:RING, height:RING, alignItems:"center", justifyContent:"center" }}>
                   <Ring pct={stats.successRatePct} size={RING} sw={SW} isDark={isDark} />
                   <View style={[StyleSheet.absoluteFill, { alignItems:"center", justifyContent:"center" }]}>
-                    <Text style={{ fontFamily:"Comfortaa_700Bold", fontSize:ns(19), color:ORANGE, includeFontPadding:false }}>
+                    <Text style={{ fontFamily:"Comfortaa_700Bold", fontSize:ns(IS_COMPACT ? 22 : 26), color:ORANGE, includeFontPadding:false }}>
                       {stats.successRatePct}%
                     </Text>
                     <Text style={{ fontFamily:"Comfortaa_400Regular", fontSize:ns(9.5), color: isDark?"rgba(255,255,255,0.40)":"rgba(0,0,0,0.36)", textAlign:"center", marginTop:2, paddingHorizontal:4 }} numberOfLines={2}>
@@ -358,9 +358,9 @@ export default function UserStats() {
 
                   {([
                     { icon:"medal-outline" as const, val: nf(stats.trophies), lbl: t("trophies") },
-                    { icon:"trophy-outline" as const, val: nf(stats.completed), lbl: t("completedChallenges") },
+                    { icon:"hourglass-outline" as const, val: nf(stats.ongoing), lbl: t("ongoingChallenges") },
                     { icon:"flame-outline" as const, val: `${nf(stats.longestStreak)}j`, lbl: t("longestStreak") },
-                    { icon:"ribbon-outline" as const, val: nf(stats.achievements), lbl: t("unlockedAchievements") },
+                    { icon:"bookmark-outline" as const, val: nf(stats.saved), lbl: t("savedChallenges") },
                   ]).map(({ icon, val, lbl }, i) => (
                     <View key={i} style={{ flexDirection:"row", alignItems:"center", gap:ns(6) }}>
                       <View style={{ width:ns(20), height:ns(20), borderRadius:ns(6), backgroundColor: wa(ORANGE, isDark?.18:.10), alignItems:"center", justifyContent:"center", flexShrink:0 }}>
@@ -484,11 +484,11 @@ const styles = StyleSheet.create({
     shadowColor: ORANGE, shadowOffset:{width:0,height:10}, shadowOpacity:0.36, shadowRadius:20, elevation:8,
   },
   badge: {
-    flexDirection:"row", alignItems:"center", gap:ns(5),
+    flexDirection:"row", alignItems:"center", gap:ns(6),
     backgroundColor:"rgba(255,255,255,0.18)", borderRadius:999,
-    paddingHorizontal:ns(10), paddingVertical:ns(5),
+    paddingHorizontal:ns(12), paddingVertical:ns(9),
   },
-  badgeTxt: { fontFamily:"Comfortaa_700Bold", fontSize:ns(11), color:"#FFFFFF" },
+  badgeTxt: { fontFamily:"Comfortaa_700Bold", fontSize:ns(13), color:"#FFFFFF" },
 
   // Mini card — dimensions fixes pour uniformité parfaite
   miniCard: {

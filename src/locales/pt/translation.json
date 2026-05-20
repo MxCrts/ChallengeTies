@@ -796,8 +796,28 @@
       "cancelInvite": "Cancelar",
       "cancelError": "Não foi possível cancelar no momento."
     },
-    "you": "Você",
-    "partner": "Parceiro",
+    "you": "Tu",
+    "partner": "Teu amigo",
+    "onboarding": {
+      "slide1": {
+        "title": "Sozinho vai mais rápido.\nJuntos vão mais longe.",
+        "desc": "ChallengeTies te conecta com alguém que realmente importa. O progresso de vocês, visível para ambos."
+      },
+      "slide2": {
+        "statLabel": "mais chances de manter 30 dias com um parceiro",
+        "withFriend": "Com um amigo",
+        "alone": "Sozinho",
+        "desc": "Seu parceiro vê você progredir. Você o vê. Essa simples visibilidade muda tudo."
+      },
+      "slide3": {
+        "title": "Pronto para começar em Dupla?",
+        "desc": "Escolha como quer encontrar seu parceiro.",
+        "ctaInvite": "Convidar um amigo",
+        "ctaInviteSub": "Envie um link para alguém que você conhece",
+        "ctaMatch": "Encontrar um parceiro",
+        "ctaMatchSub": "Combine com um usuário fazendo o mesmo desafio"
+      }
+    },
     "status": {
       "leading": "Você lidera por {{percent}}%",
       "behind": "Você está atrás por {{percent}}%",
@@ -1315,6 +1335,9 @@
   },
   "profileS": {
     "bioLabel": "Bio",
+    "statTrophies": "troféus",
+"statStreak": "melhor série",
+"statCompleted": "concluídos",
     "locationLabel": "Localização",
     "interestsLabel": "Centros de interesse",
     "heroSub": "Tudo o que te torna mais forte, num só lugar.",
@@ -2892,6 +2915,8 @@
   "commonS": {
     "close": "Fechar",
     "keep": "Manter",
+    "skip": "Pular",
+    "next": "Próximo",
     "notLoggedIn": "Você precisa estar conectado.",
     "sending": "Enviando…",
     "cancel": "Cancelar",

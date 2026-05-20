@@ -130,6 +130,8 @@ import { QUEST_CHALLENGE_EXPLORED } from "@/src/hooks/useOnboardingQuests";
 import PerformanceLogSheet from "@/components/PerformanceLogSheet";
 import ChallengeJournal from "@/components/ChallengeJournal";
 import { MARK_TOAST_EVENT } from "../../context/CurrentChallengesContext";
+import DuoOnboardingModal, { isDuoOnboardingSeen } from "@/components/DuoOnboardingModal";
+
 
 const hapticTap = () => {
   Haptics.selectionAsync().catch(() => {});
@@ -342,6 +344,7 @@ export default function ChallengeDetails() {
   const [soloBarWidth, setSoloBarWidth] = useState(0);
   const [localPerformanceLogs, setLocalPerformanceLogs] = useState<Record<string, any>>({});
   const [activeEntry, setActiveEntry] = useState<any>(null);
+  const [duoOnboardingVisible, setDuoOnboardingVisible] = useState(false);
   const [outgoingPendingInvite, setOutgoingPendingInvite] = useState<{
   id: string;
   inviteeUsername?: string | null;
@@ -609,6 +612,7 @@ useEffect(() => {
   console.log("🧭 fromFirstMark:", params?.fromFirstMark);
 }, [params?.openChoixDuo, params?.fromFirstMark]);
 
+
  const autoSendInviteOnceRef = useRef(false);
   const id = params.id || "";
 const isReload = !!(params as any)?.reload;
@@ -656,6 +660,34 @@ const shouldEnterAnim =
  useEffect(() => {
   setLocalPerformanceLogs((currentChallenge as any)?.performanceLogs ?? {});
 }, [currentChallenge?.uniqueKey, (currentChallenge as any)?.performanceLogs]);
+
+const pendingShareMilestoneRef = useRef(false);
+
+useEffect(() => {
+  const sub = DeviceEventEmitter.addListener(
+    "challengeties.share.milestone",
+    (payload: any) => {
+      if (payload?.challengeId !== id) return;
+      // On marque qu'une ShareCard est en attente
+      pendingShareMilestoneRef.current = true;
+    }
+  );
+  return () => sub.remove();
+}, [id]);
+
+// Quand tous les modals intermédiaires sont fermés, on ouvre la ShareCard
+useEffect(() => {
+  if (!pendingShareMilestoneRef.current) return;
+  if (soloMomentVisible || duoMomentVisible || perfLogVisible) return;
+  
+  // Tous les overlays sont fermés → on peut ouvrir
+  pendingShareMilestoneRef.current = false;
+  // Petit délai pour laisser l'animation de fermeture se terminer
+  const t = setTimeout(() => {
+    setShareCardVisible(true);
+  }, 400);
+  return () => clearTimeout(t);
+}, [soloMomentVisible, duoMomentVisible, perfLogVisible, id]);
 
  // 🧠 Duo dérivé de façon déterministe à partir du uniqueKey + userId
  const derivedDuo = useMemo(
@@ -1154,11 +1186,6 @@ const effectiveInviteId = invitation?.id || inviteParam || null;
 const inviteParamActive =
   !!inviteParam && consumedInviteParamRef.current !== inviteParam;
 
-const effectiveInviteVisible = useMemo(
-  () => invitationModalVisible || inviteParamActive,
-  [invitationModalVisible, inviteParamActive]
-);
-
 const clearInviteParamSafe = useCallback(() => {
   try {
     // expo-router: undefined = retire le param
@@ -1179,6 +1206,14 @@ const shouldShowGlobalInviteBoot = useMemo(() => {
   return false;
 }, [inviteParamActive, deeplinkBooting, inviteLoading, invitationModalVisible, inviteModalReady]);
 
+const effectiveInviteVisible = useMemo(
+  () => {
+    // Si l'overlay boot est actif, on ne montre pas encore le modal
+    if (shouldShowGlobalInviteBoot) return false;
+    return invitationModalVisible || inviteParamActive;
+  },
+  [invitationModalVisible, inviteParamActive, shouldShowGlobalInviteBoot]
+);
 
 // ✅ Pilote l'overlay ET ses phases depuis les états du hook
 useEffect(() => {
@@ -1197,32 +1232,24 @@ useEffect(() => {
 }, [shouldShowGlobalInviteBoot, inviteParam, invitationModalVisible, inviteModalReady]);
 
 const forceCloseInviteUI = useCallback((inviteId?: string | null) => {
-  dlog("forceCloseInviteUI()", { inviteId, invitationModalVisible, inviteLoading, deeplinkBooting, inviteModalReady });
-
-  // ✅ force OFF overlay + reset phase
-  inviteBootOff();
-
-  // 1) ferme le flow côté hook
-  try { closeInviteFlow(inviteId ?? undefined); } catch {}
-  try { setIntroVisible(false); } catch {}
-  try { setIntroBlocking(false); } catch {}
-
-  // ✅ retire le param ?invite=
-  clearInviteParamSafe();
-
+  // ✅ Consume le param IMMÉDIATEMENT pour éviter le rebond
   try {
     const toConsume = (inviteId ?? inviteParam) || null;
     consumedInviteParamRef.current = toConsume;
   } catch {}
 
-  // 2) hard reset
+  inviteBootOff();
+  try { closeInviteFlow(inviteId ?? undefined); } catch {}
+  try { setIntroVisible(false); } catch {}
+  try { setIntroBlocking(false); } catch {}
+  clearInviteParamSafe();
+
+  // hard reset
   try { setInvitationModalVisible(false); } catch {}
   try { setInviteModalReady(false); } catch {}
   try { setInvitation(null as any); } catch {}
   try { setInviteLoading(false); } catch {}
   try { setDeeplinkBooting(false); } catch {}
-
-  // ✅ root watchdog/handoff cleanup
   try { hideRootInviteHandoff(); } catch {}
 }, [
   closeInviteFlow,
@@ -1236,6 +1263,7 @@ const forceCloseInviteUI = useCallback((inviteId?: string | null) => {
   inviteLoading,
   deeplinkBooting,
   inviteModalReady,
+  inviteParam,
 ]);
 
 useEffect(() => {
@@ -2270,7 +2298,8 @@ useEffect(() => {
   router,
 ]);
 
-const handleInviteButtonPress = useCallback(() => {
+// APRÈS
+const handleInviteButtonPress = useCallback(async () => {
   if (isDuo) {
     Alert.alert(
       t("alerts.info", { defaultValue: "Info" }),
@@ -2278,12 +2307,18 @@ const handleInviteButtonPress = useCallback(() => {
     );
     return;
   }
-  // ✅ Solo actif → passe par ChoixDuoModal (même flow que "Prendre en duo")
+
+  // ✅ Check onboarding duo — une seule fois
+  const seen = await isDuoOnboardingSeen();
+  if (!seen) {
+    setDuoOnboardingVisible(true);
+    return;
+  }
+
   if (isSoloInThisChallenge) {
     setConfirmResetVisible(true);
     return;
   }
-  // ✅ Pas encore pris → ChoixDuoModal direct
   setChoixDuoVisible(true);
 }, [isDuo, isSoloInThisChallenge, t]);
 
@@ -4241,6 +4276,30 @@ partnerDaysCompleted={duoChallengeData?.duoUser?.completedDays ?? 0}
   challengeTitle={routeTitle}
   challengeCategory={routeCategory || null}
   selectedDays={localSelectedDays}
+/>
+<DuoOnboardingModal
+  visible={duoOnboardingVisible}
+  onClose={() => setDuoOnboardingVisible(false)}
+  onInviteFriend={() => {
+    setDuoOnboardingVisible(false);
+    setTimeout(() => {
+      if (isSoloInThisChallenge) {
+        setConfirmResetVisible(true);
+      } else {
+        setSendInviteVisible(true);
+      }
+    }, 320);
+  }}
+  onFindPartner={() => {
+    setDuoOnboardingVisible(false);
+    setTimeout(() => {
+      if (isSoloInThisChallenge) {
+        setConfirmResetVisible(true);
+      } else {
+        setMatchingVisible(true);
+      }
+    }, 320);
+  }}
 />
 <RequireAuthModal visible={modalVisible} onClose={closeGate} />
 
