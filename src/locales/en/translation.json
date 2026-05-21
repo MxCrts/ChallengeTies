@@ -605,6 +605,13 @@
     "cancel": "Cancel",
     "continue": "Continue"
   },
+  "profileC": {
+  "loading": "Consulting the archives…",
+  "availableForDuo": "Available for duo",
+  "doThisChallenge": "Try this challenge",
+  "inviteDuo": "Challenge in Duo",
+  "challengesInProgress": "{{count}} challenge(s) in progress"
+},
 "profileS": {
     "bioLabel": "Bio",
     "statTrophies": "trophies",

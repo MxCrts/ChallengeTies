@@ -1,29 +1,14 @@
 {
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
-    // Autorise JSX React Native en .tsx
     "jsx": "react-jsx",
-
-    // Désactive le mode strict si besoin
     "strict": false,
-
-    // Ignore les .d.ts de node_modules
     "skipLibCheck": true,
-
-    // IMPORTANT : assure-toi que module et moduleResolution concordent
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
-
-    // Permet d'importer les .json
     "resolveJsonModule": true,
-
-    // Autorise les imports par défaut depuis des modules CommonJS
     "esModuleInterop": true,
-
-    // Définit la racine du projet
-    "baseUrl": ".",
-
-    // Alias @/ → ./
+    "ignoreDeprecations": "5.0",
     "paths": {
       "@/*": ["./*"]
     }

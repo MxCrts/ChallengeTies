@@ -731,6 +731,13 @@
     "cancel": "Отмена",
     "continue": "Продолжить"
   },
+  "profileC": {
+  "loading": "Загрузка архивов…",
+  "availableForDuo": "Доступен для дуэта",
+  "doThisChallenge": "Пройти это испытание",
+  "inviteDuo": "Вызов в дуэте",
+  "challengesInProgress": "{{count}} испытание(й) в процессе"
+},
 "profileS": {
     "bioLabel": "Биография",
     "locationLabel": "Местоположение",

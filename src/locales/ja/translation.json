@@ -1334,6 +1334,13 @@
     "sendButton": "メッセージを送信",
     "errorSending": "メッセージ送信中にエラーが発生しました"
   },
+  "profileC": {
+  "loading": "記録を参照中…",
+  "availableForDuo": "デュオ参加可能",
+  "doThisChallenge": "このチャレンジをする",
+  "inviteDuo": "デュオで挑戦",
+  "challengesInProgress": "{{count}} 件進行中"
+},
   "profileS": {
     "bioLabel": "自己紹介",
     "locationLabel": "所在地",

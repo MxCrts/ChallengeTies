@@ -906,6 +906,13 @@
     "cta": "¡Genial!"
   }
 },
+"profileC": {
+  "loading": "Consultando los archivos…",
+  "availableForDuo": "Disponible para dúo",
+  "doThisChallenge": "Hacer este reto",
+  "inviteDuo": "Retar en Dúo",
+  "challengesInProgress": "{{count}} reto(s) en curso"
+},
     "pendingInvite": "Invitación en curso",
 "commonS": {
     "close": "Cerrar",

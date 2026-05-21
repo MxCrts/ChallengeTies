@@ -812,6 +812,13 @@
     "cancel": "रद्द करें",
     "continue": "जारी रखें"
   },
+  "profileC": {
+  "loading": "अभिलेखागार देखा जा रहा है…",
+  "availableForDuo": "डुओ के लिए उपलब्ध",
+  "doThisChallenge": "यह चुनौती करें",
+  "inviteDuo": "डुओ में चुनौती दें",
+  "challengesInProgress": "{{count}} चुनौती जारी"
+},
     "profileS": {
     "bioLabel": "बायो",
     "heroSub": "जो कुछ भी तुम्हें मजबूत बनाता है, सब एक जगह।",

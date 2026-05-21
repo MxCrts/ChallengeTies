@@ -727,6 +727,13 @@
     "cancel": "取消",
     "continue": "继续"
   },
+  "profileC": {
+  "loading": "正在查阅档案…",
+  "availableForDuo": "可参与双人",
+  "doThisChallenge": "参加此挑战",
+  "inviteDuo": "双人挑战",
+  "challengesInProgress": "{{count}} 个挑战进行中"
+},
 "profileS": {
     "bioLabel": "个人简介",
     "locationLabel": "位置",

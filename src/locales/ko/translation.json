@@ -1322,6 +1322,13 @@
     "sendButton": "메시지 보내기",
     "errorSending": "메시지 전송 중 오류 발생"
   },
+  "profileC": {
+  "loading": "기록을 불러오는 중…",
+  "availableForDuo": "듀오 가능",
+  "doThisChallenge": "이 챌린지 하기",
+  "inviteDuo": "듀오로 도전",
+  "challengesInProgress": "{{count}} 개 진행 중"
+},
   "profileS": {
     "bioLabel": "소개",
     "heroSub": "너를 더 강하게 만드는 모든 것, 한곳에.",

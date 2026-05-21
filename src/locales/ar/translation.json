@@ -5101,6 +5101,13 @@
     "nudgeUnregistered": "رمز إشعارات شريكك غير صالح. اطلب منه فتح التطبيق لإعادة التفعيل.",
     "nudgeExpoError": "خطأ في خدمة الإشعارات. حاول مرة أخرى لاحقًا."
   },
+  "profileC": {
+  "loading": "جارٍ تحميل السجلات…",
+  "availableForDuo": "متاح للثنائي",
+  "doThisChallenge": "القيام بهذا التحدي",
+  "inviteDuo": "التحدي في ثنائي",
+  "challengesInProgress": "{{count}} تحدٍّ جارٍ"
+},
 "profileS": {
     "bioLabel": "النبذة",
     "locationLabel": "الموقع",

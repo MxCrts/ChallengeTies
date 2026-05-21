@@ -31,6 +31,7 @@ import { sendReactionPushNotification } from "@/services/notificationService";
 import type { QueryDocumentSnapshot, DocumentData } from "firebase/firestore";
 import { completeQuest as completeOnboardingQuest } from "@/src/services/onboardingQuestService";
 import { useRouter } from "expo-router";
+import UserProfileCard from "@/components/UserProfileCard";
 
 /* ─── Responsive ───────────────────────────────────── */
 const { width: SW } = Dimensions.get("window");
@@ -280,8 +281,14 @@ const TriumphHeader = ({
 
 /* ─── Stèle / EventCard ────────────────────────────── */
 const ExploitStele = React.memo(function ExploitStele({
-  event, index, isDark, t,
-}: { event: FeedEvent; index: number; isDark: boolean; t: (k: string, o?: any) => string }) {
+  event, index, isDark, t, onAvatarPress,
+}: {
+  event: FeedEvent;
+  index: number;
+  isDark: boolean;
+  t: (k: string, o?: any) => string;
+  onAvatarPress: (uid: string, username: string, avatarUrl: string, challengeId: string, challengeTitle: string) => void;
+}) {
   const cfg  = TYPE_CONFIG[event.type] ?? TYPE_CONFIG.daily_mark;
   const isSystem = !!(event as any).isSystem;
   const isMe = event.uid === auth.currentUser?.uid;
@@ -363,7 +370,19 @@ const ExploitStele = React.memo(function ExploitStele({
           <View style={s.steleBody}>
 
             {/* Avatar colonne */}
-            <View style={s.avatarCol}>
+            <Pressable
+     style={s.avatarCol}
+     onPress={() => {
+       if (isSystem || !event.uid) return;
+       onAvatarPress(
+         event.uid,
+         event.username,
+         event.avatarUrl || "",
+         event.challengeId || "",
+         event.challengeTitle || "",
+       );
+     }}
+   >
               {isSystem ? (
   <View style={[s.avatarOuter, {
     borderColor: GOLD + "50",
@@ -374,12 +393,14 @@ const ExploitStele = React.memo(function ExploitStele({
     <Ionicons name="trophy" size={ns(26)} color={GOLD_BRIGHT} />
   </View>
 ) : (
-  <Image
-    source={{ uri: event.avatarUrl || avatarUrl(event.username) }}
-    style={s.avatar}
-    contentFit="cover"
-    cachePolicy="memory-disk"
-  />
+  <View style={[s.avatarOuter, { borderColor: cfg.color + "50" }]}>
+    <Image
+      source={{ uri: event.avatarUrl || avatarUrl(event.username) }}
+      style={s.avatar}
+      contentFit="cover"
+      cachePolicy="memory-disk"
+    />
+  </View>
 )}
               {/* Médaillon type */}
               <View style={[s.medallion, { backgroundColor: cfg.color, borderColor: isDark ? "#0E0C08" : PARCHMENT }]}>
@@ -391,7 +412,7 @@ const ExploitStele = React.memo(function ExploitStele({
                   <Ionicons name="people" size={ns(8)} color="#0E0C08" />
                 </View>
               )}
-            </View>
+            </Pressable>
 
             {/* Contenu inscription */}
             <View style={s.inscription}>
@@ -399,9 +420,42 @@ const ExploitStele = React.memo(function ExploitStele({
               {/* Nom + temps */}
               <View style={s.inscriptionTopRow}>
                 <View style={s.nameRow}>
-                                    <Text style={[s.inscriptionName, { color: cfg.color }]} numberOfLines={1}>
-                    {event.username}
-                  </Text>
+                                    <Pressable
+  onPress={() => {
+    if (isSystem || !event.uid) return;
+    onAvatarPress(
+      event.uid,
+      event.username,
+      event.avatarUrl || "",
+      event.challengeId || "",
+      event.challengeTitle || "",
+    );
+  }}
+>
+  <View style={{ flexDirection: "row", alignItems: "center", gap: ns(4) }}>
+    <Text style={[s.inscriptionName, { color: cfg.color }]} numberOfLines={1}>
+      {event.username}
+    </Text>
+    {!isSystem && (
+      <Ionicons
+        name="person-circle-outline"
+        size={ns(13)}
+        color={cfg.color + "90"}
+      />
+    )}
+  </View>
+  {!isSystem && (
+    <Text style={{
+      fontFamily: "Comfortaa_400Regular",
+      fontSize: ns(9.5),
+      color: cfg.color + "70",
+      includeFontPadding: false,
+      marginTop: ns(1),
+    }}>
+      Voir profil →
+    </Text>
+  )}
+</Pressable>
                   {isMe && (
                     <View style={[s.meTag, { backgroundColor: cfg.color + "22", borderColor: cfg.color + "55" }]}>
                       <Text style={[s.meTagText, { color: cfg.color }]}>
@@ -598,6 +652,13 @@ export default function ExploitsScreen() {
   const [hasMore,     setHasMore]     = useState(true);
   const [refreshing,  setRefreshing]  = useState(false);
   const [error,       setError]       = useState<string | null>(null);
+  const [profileCard, setProfileCard] = useState<{
+  uid: string;
+  username: string;
+  avatarUrl?: string;
+  challengeId?: string;
+  challengeTitle?: string;
+} | null>(null);
 
   const lastDocRef = useRef<QueryDocumentSnapshot<DocumentData> | null>(null);
 
@@ -652,9 +713,16 @@ export default function ExploitsScreen() {
 
   const renderItem = useCallback(
     ({ item, index }: { item: FeedEvent; index: number }) => (
-      <ExploitStele event={item} index={index} isDark={isDark} t={t} />
-    ), [isDark, t]
-  );
+     <ExploitStele
+       event={item}
+       index={index}
+       isDark={isDark}
+       t={t}
+       onAvatarPress={(uid, username, avatarUrl, challengeId, challengeTitle) => {
+         setProfileCard({ uid, username, avatarUrl, challengeId, challengeTitle });
+       }}
+     />
+   ), [isDark, t, setProfileCard]);
   const keyExtractor = useCallback((item: FeedEvent) => item.id, []);
 
   const ListHeader = useCallback(() => (
@@ -766,6 +834,15 @@ export default function ExploitsScreen() {
           removeClippedSubviews={Platform.OS !== "web"}
         />
       )}
+      <UserProfileCard
+   visible={!!profileCard}
+   uid={profileCard?.uid ?? null}
+   username={profileCard?.username ?? ""}
+   avatarUrl={profileCard?.avatarUrl}
+   challengeId={profileCard?.challengeId}
+   challengeTitle={profileCard?.challengeTitle}
+   onClose={() => setProfileCard(null)}
+ />
     </View>
   );
 }
@@ -833,9 +910,9 @@ reactRow:   { flexDirection: "row", gap: ns(8), marginBottom: ns(8) },
   reactEmoji: { fontSize: ns(14) },
   reactCount: { fontFamily: "Comfortaa_700Bold", fontSize: ns(11) },
   /* Avatar colonne */
-  avatarCol:    { alignItems: "center", marginRight: ns(12), position: "relative", paddingTop: ns(2) },
+  avatarCol: { alignItems: "center", marginRight: ns(12), position: "relative", paddingTop: ns(2), paddingBottom: ns(8), paddingHorizontal: ns(4) },
     avatarOuter:  { width: ns(52), height: ns(52), borderRadius: ns(26), borderWidth: 2, overflow: "hidden" },
-  avatar:       { width: "100%", height: "100%" },
+  avatar: { width: ns(52), height: ns(52), borderRadius: ns(26) },
   medallion:    { position: "absolute", bottom: -ns(3), right: -ns(5), width: ns(20), height: ns(20), borderRadius: ns(10), alignItems: "center", justifyContent: "center", borderWidth: 1.5 },
   duoMedallion: { position: "absolute", top: -ns(3), right: -ns(5), width: ns(18), height: ns(18), borderRadius: ns(9), alignItems: "center", justifyContent: "center", borderWidth: 1.5 },
 

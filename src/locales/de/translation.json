@@ -834,6 +834,13 @@
     "cancel": "Abbrechen",
     "continue": "Fortfahren"
   },
+  "profileC": {
+  "loading": "Archive werden geladen…",
+  "availableForDuo": "Duo verfügbar",
+  "doThisChallenge": "Diese Challenge machen",
+  "inviteDuo": "Im Duo herausfordern",
+  "challengesInProgress": "{{count}} Challenge(s) laufen"
+},
 "profileS": {
     "bioLabel": "Bio",
     "statTrophies": "Trophäen",

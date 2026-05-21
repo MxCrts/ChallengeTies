@@ -300,6 +300,13 @@
         }
       }
 },
+"profileC": {
+  "loading": "Consultation des annales…",
+  "availableForDuo": "Dispo duo",
+  "doThisChallenge": "Faire ce défi",
+  "inviteDuo": "Défier en Duo",
+  "challengesInProgress": "{{count}} défi(s) en cours"
+},
   "profile": "Profil",
   "yourProfile": "Votre profil",
   "addBioHere": "Ajoutez une bio ici",

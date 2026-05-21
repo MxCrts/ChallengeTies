@@ -17,7 +17,7 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { doc, onSnapshot, getDoc, collection, query, orderBy, limit, getDocs } from "firebase/firestore";
+import { doc, onSnapshot, getDoc, collection, query, orderBy, limit, getDocs, updateDoc } from "firebase/firestore";
 import { auth, db } from "@/constants/firebase-config";
 import { LinearGradient } from "expo-linear-gradient";
 import { useProfileUpdate } from "../../context/ProfileUpdateContext";
@@ -254,6 +254,56 @@ export default function ProfileScreen() {
     }, () => { setError(t("profileLoadError")); setIsLoading(false); });
     return () => unsub();
   }, [profileUpdated]);
+
+  // ── Calcul rétroactif longestStreak ───────────────────────
+useEffect(() => {
+  const uid = auth.currentUser?.uid;
+  if (!uid || !userData) return;
+
+  const current = Number((userData as any)?.longestStreak ?? 0);
+
+  // Calcule le max streak sur tous les challenges actifs + terminés
+  const allChallenges = [
+    ...((userData as any)?.CurrentChallenges ?? []),
+    ...((userData as any)?.CompletedChallenges ?? []),
+  ];
+
+  let best = current;
+  for (const ch of allChallenges) {
+    const keys: string[] = ch?.completionDateKeys ?? [];
+    if (keys.length === 0) continue;
+
+    // Calcule le streak max consécutif dans les keys triées
+    const sorted = [...keys].sort();
+    let streak = 1;
+    let maxStreak = 1;
+    for (let i = 1; i < sorted.length; i++) {
+      const prev = sorted[i - 1];
+      const curr = sorted[i];
+      // Vérifie si les deux keys sont consécutives (diff = 1 jour)
+      const pDate = new Date(
+        `${prev.slice(0, 4)}-${prev.slice(4, 6)}-${prev.slice(6, 8)}`
+      );
+      const cDate = new Date(
+        `${curr.slice(0, 4)}-${curr.slice(4, 6)}-${curr.slice(6, 8)}`
+      );
+      const diffMs = cDate.getTime() - pDate.getTime();
+      const diffDays = Math.round(diffMs / 86400000);
+      if (diffDays === 1) {
+        streak++;
+        maxStreak = Math.max(maxStreak, streak);
+      } else {
+        streak = 1;
+      }
+    }
+    best = Math.max(best, maxStreak);
+  }
+
+  // Met à jour uniquement si on a trouvé mieux
+  if (best > current) {
+    updateDoc(doc(db, "users", uid), { longestStreak: best }).catch(() => {});
+  }
+}, [userData?.trophies]); // se re-déclenche à chaque mark (trophies change)
 
   // ── Charge le rapport dès que uid dispo ───────────────────────────────────
   useEffect(() => {

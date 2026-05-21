@@ -1333,6 +1333,13 @@
     "sendButton": "Enviar mensagem",
     "errorSending": "Erro ao enviar a mensagem"
   },
+  "profileC": {
+  "loading": "A consultar os arquivos…",
+  "availableForDuo": "Disponível para duo",
+  "doThisChallenge": "Fazer este desafio",
+  "inviteDuo": "Desafiar em Duo",
+  "challengesInProgress": "{{count}} desafio(s) em curso"
+},
   "profileS": {
     "bioLabel": "Bio",
     "statTrophies": "troféus",

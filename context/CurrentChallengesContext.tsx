@@ -1425,6 +1425,19 @@ defer(async () => {
     await recordDailyGlobalMark(userId, now);
     await finalizePerfectMonthIfNeeded(now, userId);
 
+    // 🆕 Mise à jour longestStreak
+    if (newStreak > 0) {
+      const userSnap = await getDoc(doc(db, "users", userId));
+      if (userSnap.exists()) {
+        const currentLongest = Number(userSnap.data()?.longestStreak ?? 0);
+        if (newStreak > currentLongest) {
+          await updateDoc(doc(db, "users", userId), {
+            longestStreak: newStreak,
+          });
+        }
+      }
+    }
+
     const FOCUS_ID = "focus";
     const isFocus = id === FOCUS_ID;
     if (isFocus) {

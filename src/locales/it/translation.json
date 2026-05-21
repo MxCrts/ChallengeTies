@@ -786,6 +786,13 @@
     "hide": "Nascondi",
     "continue": "Continua"
   },
+  "profileC": {
+  "loading": "Consultazione degli archivi…",
+  "availableForDuo": "Disponibile per duo",
+  "doThisChallenge": "Fai questa sfida",
+  "inviteDuo": "Sfida in Duo",
+  "challengesInProgress": "{{count}} sfida/e in corso"
+},
 "profileS": {
     "bioLabel": "Bio",
     "statTrophies": "trofei",

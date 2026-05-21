@@ -1359,6 +1359,13 @@
     "systemWelcome": "Welkom in de chatruimte van deze uitdaging. Deel je vragen, je vooruitgang en moedig anderen aan — blijf vriendelijk en respecteer de regels 🤝",
     "welcomeTitle": "Welkom 👋"
   },
+  "profileC": {
+  "loading": "Archieven raadplegen…",
+  "availableForDuo": "Beschikbaar voor duo",
+  "doThisChallenge": "Deze uitdaging doen",
+  "inviteDuo": "Uitdagen in Duo",
+  "challengesInProgress": "{{count}} uitdaging(en) bezig"
+},
 
   "success": "Succes",
   "messageReported": "Bericht gemeld. Bedankt voor je oplettendheid.",
