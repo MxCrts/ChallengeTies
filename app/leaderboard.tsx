@@ -380,7 +380,9 @@ if (uid) {
 
               {/* My rank card */}
               {currentUser && (
-                <MyRankCard
+  tab !== "weekly" || weeklyPlayers.some(p => p.id === currentUser.id)
+) && (
+  <MyRankCard
     currentUser={currentUser}
     displayPlayers={displayPlayers}
     exactRank={exactRank}
@@ -567,10 +569,16 @@ function MyRankCard({
     : currentUser.trophies;
 
   // Rang affiché : rang exact (Firestore count) en priorité, sinon position dans la liste affichée
-  const displayedRank = exactRank ?? (() => {
-    const idx = displayPlayers.findIndex((p) => p.id === currentUser.id);
+  const displayedRank = (() => {
+  if (tab === "weekly") {
+    const idx = displayPlayers.findIndex(p => p.id === currentUser.id);
+    return idx >= 0 ? idx + 1 : null;
+  }
+  return exactRank ?? (() => {
+    const idx = displayPlayers.findIndex(p => p.id === currentUser.id);
     return idx >= 0 ? idx + 1 : null;
   })();
+})();
 
   const pulse = useSharedValue(1);
   useEffect(() => {
@@ -581,7 +589,10 @@ function MyRankCard({
       ), -1, true
     );
   }, []);
-  const pulseStyle = useAnimatedStyle(() => ({ transform: [{ scale: pulse.value }] }));
+  const pulseStyle = useAnimatedStyle(() => ({
+  transform: [{ scale: pulse.value }],
+  zIndex: 2,
+}));
 
   return (
     <Animated.View
@@ -804,7 +815,7 @@ const S = StyleSheet.create({
   pedestalRank:  { fontFamily: "Comfortaa_700Bold", includeFontPadding: false },
 
   // My rank card
-  myRankWrap:    { marginHorizontal: SPACING, marginTop: ns(8), marginBottom: ns(4), borderRadius: ns(18) },
+  myRankWrap:    { marginHorizontal: SPACING, overflow: "visible", marginTop: ns(8), marginBottom: ns(4), borderRadius: ns(18) },
   myRankRing:    { borderRadius: ns(18), padding: ns(2), overflow: "hidden" },
   myRankCard:    { borderRadius: ns(16), paddingVertical: ns(12), paddingHorizontal: ns(14), flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   myRankLeft:    { flexDirection: "row", alignItems: "center", flex: 1 },
